@@ -69,19 +69,21 @@ def display_envelope():
 
 def display_invitation_card(data, image_bytes=None):
     theme = THEMES[data["theme"]]
-    # Improved background fit: use 'cover', add overlay for readability
-    background_style = ""
-    overlay = ""
+    # Guarantee image shows: fixed min-height, overlay for text readability
     if image_bytes:
         background_style = (
             f"background: url('data:image/png;base64,{image_bytes}') center center / cover no-repeat;"
-            "background-blend-mode: lighten;"
+            f"background-color: {theme['bg']};"
+            "min-height: 480px;"
             "position: relative;"
         )
-        overlay = "<div style='position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.72);z-index:0;border-radius:16px;'></div>"
+        overlay = "<div style='position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.74);z-index:0;border-radius:16px;'></div>"
+    else:
+        background_style = f"background-color: {theme['bg']};min-height: 480px;position: relative;"
+        overlay = ""
     st.markdown(
         f"""
-        <div style="position:relative;{background_style}background-color:{theme['bg']};padding:2em 2em 1em 2em;border-radius:16px;border:2px solid {theme['accent']};font-family:{FONT_FAMILY};box-shadow:2px 2px 20px #a80000;overflow:hidden;">
+        <div style="position:relative;{background_style}padding:2em 2em 1em 2em;border-radius:16px;border:2px solid {theme['accent']};font-family:{FONT_FAMILY};box-shadow:2px 2px 20px #a80000;overflow:hidden;">
             {overlay}
             <div style="text-align:center;position:relative;z-index:1;">
                 {f"<div style='font-size:1.2em;color:#a80000;font-weight:bold;margin-bottom:1em;'>{data['invocation']}</div>" if data['invocation'] else ""}
