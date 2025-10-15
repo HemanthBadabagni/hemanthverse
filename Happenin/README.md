@@ -4,12 +4,12 @@ A beautiful Streamlit application for creating traditional Indian ceremony invit
 
 ## 🎯 Event Details
 
-**Event Name:** Shubha Gruha Praveshah  
-**Host Names:** Mounika, Hemanth & Viraj  
-**Date:** November 13, 2025  
-**Time:** 4:00 PM  
-**Venue:** 3108 Honerywood Drive, Leander, TX -78641  
-**Invocation:** ॐ श्री गणेशाय नमः  
+**Event Name:**   
+**Host Names:** 
+**Date:**  
+**Time:**  
+**Venue:** 
+**Invocation:**
 
 ## 📁 Project Structure
 
