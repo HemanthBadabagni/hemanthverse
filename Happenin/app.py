@@ -81,24 +81,24 @@ def display_invitation_card(data, image_bytes=None):
     else:
         background_style = f"background-color: {theme['bg']};min-height: 480px;position: relative;"
         overlay = ""
-    st.markdown(
-        f"""
-        <div style="position:relative;{background_style}padding:2em 2em 1em 2em;border-radius:16px;border:2px solid {theme['accent']};font-family:{FONT_FAMILY};box-shadow:2px 2px 20px #a80000;overflow:hidden;">
-            {overlay}
-            <div style="text-align:center;position:relative;z-index:1;">
-                {f"<div style='font-size:1.2em;color:#a80000;font-weight:bold;margin-bottom:1em;'>{data['invocation']}</div>" if data['invocation'] else ""}
-                <span style="font-size:2.3em;color:{theme['accent']};font-weight:bold;">{data['event_name']}</span><br>
-                <span style="font-size:1.2em;color:#444;">Hosted by {data['host_names']}</span><br>
-                <span style="font-size:1em;color:#444;">{data['event_date']} at {data['event_time']}</span><br>
-                <span style="font-size:1em;color:#444;">Venue: {data['venue_address']}</span>
-            </div>
-            <hr style="border:1px solid {theme['accent']};margin:2em 0;position:relative;z-index:1;">
-            <div style="font-size:1.15em;color:#222;margin:1em 0 0.5em 0;padding:1em 0;position:relative;z-index:1;">
-                {data['invitation_message']}
-            </div>
+    # Compose the invitation HTML
+    html = f"""
+    <div style="position:relative;{background_style}padding:2em 2em 1em 2em;border-radius:16px;border:2px solid {theme['accent']};font-family:{FONT_FAMILY};box-shadow:2px 2px 20px #a80000;overflow:hidden;">
+        {overlay}
+        <div style="text-align:center;position:relative;z-index:1;">
+            {f"<div style='font-size:1.2em;color:#a80000;font-weight:bold;margin-bottom:1em;'>{data['invocation']}</div>" if data['invocation'] else ""}
+            <span style="font-size:2.3em;color:{theme['accent']};font-weight:bold;">{data['event_name']}</span><br>
+            <span style="font-size:1.2em;color:#444;">Hosted by {data['host_names']}</span><br>
+            <span style="font-size:1em;color:#444;">{data['event_date']} at {data['event_time']}</span><br>
+            <span style="font-size:1em;color:#444;">Venue: {data['venue_address']}</span>
         </div>
-        """, unsafe_allow_html=True
-    )
+        <hr style="border:1px solid {theme['accent']};margin:2em 0;position:relative;z-index:1;">
+        <div style="font-size:1.15em;color:#222;margin:1em 0 0.5em 0;padding:1em 0;position:relative;z-index:1;">
+            {data['invitation_message']}
+        </div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
 
 # --- Header ---
 st.markdown(
