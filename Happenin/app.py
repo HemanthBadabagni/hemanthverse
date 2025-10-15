@@ -7,6 +7,8 @@ from PIL import Image
 from io import BytesIO
 import base64
 import logging
+import smtplib
+from email.message import EmailMessage
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -64,6 +66,89 @@ def get_local_image_base64():
 def get_local_music_base64():
     """Get the local music file as base64"""
     return load_local_file("mridangam-tishra-33904.mp3")
+
+def compute_average_luminance(image_base64):
+    """Compute a simple average luminance (0..1) from a base64 image string.
+
+    Returns None if computation fails.
+    """
+    try:
+        if not image_base64:
+            return None
+        img = Image.open(BytesIO(base64.b64decode(image_base64))).convert("L")
+        img = img.resize((64, 64))
+        pixels = list(img.getdata())
+        if not pixels:
+            return None
+        return (sum(pixels) / len(pixels)) / 255.0
+    except Exception as e:
+        logger.warning(f"Failed to compute luminance: {e}")
+        return None
+
+def choose_text_color(image_base64, mode="Auto", custom_color="#000000"):
+    """Choose a readable text color based on the mode and background image.
+
+    - Auto: picks dark (#111111) on light backgrounds, light (#f8f8f8) on dark.
+    - Dark/Light: force preset colors.
+    - Custom: returns provided custom color.
+    """
+    if mode == "Custom":
+        return custom_color or "#000000"
+    if mode == "Dark":
+        return "#111111"
+    if mode == "Light":
+        return "#f8f8f8"
+    luminance = compute_average_luminance(image_base64)
+    if luminance is None:
+        return "#111111"
+    return "#111111" if luminance > 0.5 else "#f8f8f8"
+
+def send_rsvp_email(invite_id, rsvp_entry):
+    """Send an email notification for a new RSVP if SMTP env vars are set.
+
+    Expected environment variables:
+      - SMTP_HOST (default: smtp.gmail.com)
+      - SMTP_PORT (default: 587)
+      - SMTP_USER
+      - SMTP_PASS
+      - SMTP_TLS (default: true)
+      - RSVP_NOTIFY_EMAIL (comma-separated recipients; default provided)
+    """
+    notify_to = os.getenv("RSVP_NOTIFY_EMAIL", "hemanthb.0445@gmail.com")
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_pass = os.getenv("SMTP_PASS")
+    if not (smtp_user and smtp_pass and notify_to):
+        logger.info("RSVP email not sent: SMTP settings not fully configured.")
+        return
+    host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    port = int(os.getenv("SMTP_PORT", "587"))
+    use_tls = os.getenv("SMTP_TLS", "true").lower() != "false"
+    try:
+        data = load_invitation(invite_id) or {}
+        event_name = data.get("event_name", "Your Event")
+        subject = f"RSVP: {event_name} — {rsvp_entry['name']} ({rsvp_entry['response']})"
+        body = (
+            f"Event: {event_name}\n"
+            f"Invite ID: {invite_id}\n\n"
+            f"Name: {rsvp_entry['name']}\n"
+            f"Email: {rsvp_entry.get('email','')}\n"
+            f"Response: {rsvp_entry['response']}\n"
+            f"Message: {rsvp_entry.get('message','')}\n"
+            f"Timestamp: {rsvp_entry['timestamp']}\n"
+        )
+        msg = EmailMessage()
+        msg["From"] = smtp_user
+        msg["To"] = notify_to
+        msg["Subject"] = subject
+        msg.set_content(body)
+        with smtplib.SMTP(host, port, timeout=15) as server:
+            if use_tls:
+                server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+        logger.info("RSVP notification email sent.")
+    except Exception as e:
+        logger.warning(f"Failed to send RSVP email: {e}")
 
 def validate_event_data(data):
     """Validate event data for required fields"""
@@ -151,6 +236,29 @@ def load_rsvps(invite_id):
     except Exception:
         return []
 
+def export_rsvps_csv(invite_id):
+    """Return RSVPs as CSV bytes."""
+    import csv
+    from io import StringIO
+    rows = load_rsvps(invite_id)
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=["name","email","response","message","timestamp"])
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({
+            "name": row.get("name",""),
+            "email": row.get("email",""),
+            "response": row.get("response",""),
+            "message": row.get("message",""),
+            "timestamp": row.get("timestamp",""),
+        })
+    return output.getvalue().encode("utf-8")
+
+def clear_rsvps(invite_id):
+    rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
+    with open(rsvp_file, "w", encoding="utf-8") as f:
+        json.dump([], f)
+
 def get_rsvp_analytics(invite_id):
     """Get RSVP analytics and statistics"""
     rsvps = load_rsvps(invite_id)
@@ -213,7 +321,7 @@ def display_envelope():
         """, unsafe_allow_html=True
     )
 
-def display_invitation_card(data, image_bytes=None):
+def display_invitation_card(data, image_bytes=None, text_color="#000000", font_scale=1.0, overlay_opacity=0.0, title_offset_px=0):
     theme = THEMES[data["theme"]]
     # Use background image with better positioning to show more of the image
     if image_bytes:
@@ -223,15 +331,18 @@ def display_invitation_card(data, image_bytes=None):
             "min-height: 900px;"
             "position: relative;"
         )
-        # No overlay - use image as-is with black fonts for readability
-        overlay = ""
+        # Optional overlay to improve readability
+        overlay = (
+            f"<div style=\"position:absolute;inset:0;background:rgba(0,0,0,{overlay_opacity});\"></div\>"
+            if overlay_opacity and overlay_opacity > 0 else ""
+        )
     else:
         background_style = f"background-color: {theme['bg']};min-height: 900px;position: relative;"
         overlay = ""
     # Build the invocation HTML separately
     invocation_html = ""
     if data.get('invocation'):
-        invocation_html = f'<div style="font-size:1.4em;color:#000000;font-weight:bold;margin-bottom:1em;text-shadow:2px 2px 4px rgba(255,255,255,0.8);">{data["invocation"]}</div>'
+        invocation_html = f'<div style="font-size:{1.4*font_scale:.2f}em;color:{text_color};font-weight:bold;margin-bottom:1em;text-shadow:2px 2px 4px rgba(255,255,255,0.8);">{data["invocation"]}</div>'
     
     # Build HTML using direct string concatenation to avoid formatting issues
     html_content = f"""
@@ -239,13 +350,16 @@ def display_invitation_card(data, image_bytes=None):
         {overlay}
         <div style="text-align:center;position:relative;z-index:1;">
             {invocation_html}
-            <span style="font-size:2.8em;color:#000000;font-weight:bold;text-shadow:2px 2px 4px rgba(255,255,255,0.8);">{data['event_name']}</span><br>
-            <span style="font-size:1.4em;color:#000000;font-weight:600;text-shadow:1px 1px 2px rgba(255,255,255,0.8);">Hosted by {data['host_names']}</span><br>
-            <span style="font-size:1.2em;color:#000000;font-weight:500;text-shadow:1px 1px 2px rgba(255,255,255,0.8);">{data['event_date']} at {data['event_time']}</span><br>
-            <span style="font-size:1.1em;color:#000000;font-weight:500;text-shadow:1px 1px 2px rgba(255,255,255,0.8);">Venue: {data['venue_address']}</span>
+            <div style="margin-top:{title_offset_px}px;">
+                <span style="font-size:{2.8*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:2px 2px 4px rgba(255,255,255,0.8);">{data['event_name']}</span>
+            </div>
+            <br>
+            <span style="font-size:{1.4*font_scale:.2f}em;color:{text_color};font-weight:600;text-shadow:1px 1px 2px rgba(255,255,255,0.8);">Hosted by {data['host_names']}</span><br>
+            <span style="font-size:{1.2*font_scale:.2f}em;color:{text_color};font-weight:500;text-shadow:1px 1px 2px rgba(255,255,255,0.8);">{data['event_date']} at {data['event_time']}</span><br>
+            <span style="font-size:{1.1*font_scale:.2f}em;color:{text_color};font-weight:500;text-shadow:1px 1px 2px rgba(255,255,255,0.8);">Venue: {data['venue_address']}</span>
         </div>
-        <hr style="border:2px solid #000000;margin:2em 0;position:relative;z-index:1;box-shadow:1px 1px 2px rgba(255,255,255,0.8);">
-        <div style="font-size:1.2em;color:#000000;margin:1em 0 0.5em 0;padding:1em 0;position:relative;z-index:1;font-weight:500;text-shadow:1px 1px 2px rgba(255,255,255,0.8);line-height:1.6;">
+        <hr style="border:2px solid {text_color};margin:2em 0;position:relative;z-index:1;box-shadow:1px 1px 2px rgba(255,255,255,0.8);">
+        <div style="font-size:{1.2*font_scale:.2f}em;color:{text_color};margin:1em 0 0.5em 0;padding:1em 0;position:relative;z-index:1;font-weight:500;text-shadow:1px 1px 2px rgba(255,255,255,0.8);line-height:1.6;">
             {data['invitation_message']}
         </div>
     </div>
@@ -299,7 +413,9 @@ if hasattr(st.session_state, 'test_invite_id') and st.session_state.test_invite_
             music_bytes = base64.b64decode(test_data["music_base64"])
             music_filename = test_data["music_filename"]
         
-        display_invitation_card(test_data, image_bytes)
+        # Auto-choose a readable text color based on the image
+        auto_color = choose_text_color(image_bytes, mode="Auto")
+        display_invitation_card(test_data, image_bytes, text_color=auto_color, font_scale=1.0, overlay_opacity=0.15, title_offset_px=-20)
         
         # Play music if available
         if music_bytes and music_filename:
@@ -336,7 +452,45 @@ if invite_id:
                 st.session_state["envelope_open"] = True
         else:
             st.markdown("## 🎉 Your Invitation")
-            display_invitation_card(data, image_bytes)
+            auto_color = choose_text_color(image_bytes, mode=st.session_state.get("text_color_mode", "Auto"), custom_color=st.session_state.get("custom_text_color", "#000000"))
+            display_invitation_card(
+                data,
+                image_bytes,
+                text_color=auto_color,
+                font_scale=st.session_state.get("font_scale", 1.0),
+                overlay_opacity=st.session_state.get("overlay_opacity", 0.15),
+                title_offset_px=st.session_state.get("title_offset_px", -20),
+            )
+            # Manager Mode controls (enable with ?admin=1)
+            is_admin = st.query_params.get("admin", "0") in ("1", "true", "yes")
+            if is_admin:
+                st.markdown("---")
+                st.markdown("### 🛠️ Manager Mode")
+                colA, colB, colC, colD = st.columns(4)
+                with colA:
+                    if st.button("Add sample RSVP"):
+                        sample = {
+                            "name": "Sample Guest",
+                            "email": "sample@example.com",
+                            "response": "Yes",
+                            "message": "Looking forward!",
+                            "timestamp": str(datetime.utcnow()),
+                        }
+                        save_rsvp(invite_id, sample)
+                        st.success("Sample RSVP added.")
+                        st.rerun()
+                with colB:
+                    csv_bytes = export_rsvps_csv(invite_id)
+                    st.download_button("Export RSVPs CSV", csv_bytes, file_name=f"rsvps_{invite_id}.csv", mime="text/csv")
+                with colC:
+                    if st.button("Clear RSVPs"):
+                        clear_rsvps(invite_id)
+                        st.success("All RSVPs cleared.")
+                        st.rerun()
+                with colD:
+                    if st.button("Reset Envelope"):
+                        st.session_state["envelope_open"] = False
+                        st.rerun()
             
             # Play music if available with better styling
             if music_bytes and music_filename:
@@ -387,6 +541,8 @@ if invite_id:
                         "timestamp": str(datetime.utcnow())
                     }
                     save_rsvp(invite_id, rsvp_entry)
+                    # Optional email notification
+                    send_rsvp_email(invite_id, rsvp_entry)
                     st.success("🎉 Thank you! Your RSVP has been recorded.")
                     st.rerun()
 
@@ -509,6 +665,14 @@ else:
             music_file = st.file_uploader("Upload Music (MP3/WAV, optional)", type=["mp3", "wav"])
         with col4:
             theme = st.selectbox("Theme Choice", list(THEMES.keys()), index=list(THEMES.keys()).index(default_values.get('theme', 'Temple')))
+            st.markdown("**Appearance:**")
+            text_color_mode = st.selectbox("Text color", ["Auto", "Dark", "Light", "Custom"], index=0)
+            custom_text_color = "#000000"
+            if text_color_mode == "Custom":
+                custom_text_color = st.color_picker("Pick custom text color", value="#111111")
+            font_scale = st.slider("Font scale", min_value=0.8, max_value=1.6, value=1.0, step=0.05)
+            overlay_opacity = st.slider("Overlay dimmer", min_value=0.0, max_value=0.6, value=0.15, step=0.05)
+            title_offset_px = st.slider("Title vertical offset (px)", min_value=-200, max_value=200, value=-20, step=5)
         
         submit = st.form_submit_button("🎨 Preview & Generate Link")
 
@@ -588,8 +752,23 @@ else:
             "music_filename": music_filename,
         }
 
+        # Persist appearance controls in session for invite view as well
+        st.session_state["text_color_mode"] = text_color_mode
+        st.session_state["custom_text_color"] = custom_text_color
+        st.session_state["font_scale"] = font_scale
+        st.session_state["overlay_opacity"] = overlay_opacity
+        st.session_state["title_offset_px"] = title_offset_px
+
         st.markdown("### 🎨 Invitation Preview")
-        display_invitation_card(data, image_bytes)
+        preview_color = choose_text_color(image_bytes, mode=text_color_mode, custom_color=custom_text_color)
+        display_invitation_card(
+            data,
+            image_bytes,
+            text_color=preview_color,
+            font_scale=font_scale,
+            overlay_opacity=overlay_opacity,
+            title_offset_px=title_offset_px,
+        )
         if music_bytes and music_filename:
             st.audio(music_bytes, format=f"audio/{music_filename.split('.')[-1]}")
         
