@@ -1,0 +1,51 @@
+[
+  {
+    "name": "Alice",
+    "email": "alice@example.com",
+    "response": "Yes",
+    "message": "",
+    "timestamp": "2025-10-15T00:00:00"
+  },
+  {
+    "name": "Bob",
+    "email": "bob@example.com",
+    "response": "Yes",
+    "message": "Excited!",
+    "timestamp": "2025-10-15T00:01:00"
+  },
+  {
+    "name": "Charlie",
+    "email": "charlie@example.com",
+    "response": "No",
+    "message": "Out of town",
+    "timestamp": "2025-10-15T00:02:00"
+  },
+  {
+    "name": "Diana",
+    "email": "diana@example.com",
+    "response": "Maybe",
+    "message": "Will confirm later",
+    "timestamp": "2025-10-15T00:03:00"
+  },
+  {
+    "name": "Eve",
+    "email": "eve@example.com",
+    "response": "Yes",
+    "message": "",
+    "timestamp": "2025-10-15T00:04:00"
+  },
+  {
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "response": "No",
+    "message": "Sorry, can't make it",
+    "timestamp": "2025-10-15T00:00:00"
+  },
+  {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "response": "Yes",
+    "message": "Looking forward to it!",
+    "timestamp": "2025-10-15T00:00:00"
+  }
+]
