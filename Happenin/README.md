@@ -181,9 +181,9 @@ python test_invitations.py
 
 This invitation system is specifically configured for:
 
-**Shubha Gruha Praveshah** - A housewarming ceremony celebrating the divine blessings of Lord Venkateswara. The invitation includes traditional Sanskrit invocation and creates a beautiful, shareable digital invitation perfect for modern celebrations while maintaining cultural authenticity.
+
 
 ---
 
-*Created with ❤️ for traditional Indian ceremonies*
+*Created with ❤️ for ceremonies*
 
