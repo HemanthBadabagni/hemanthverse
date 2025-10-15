@@ -69,21 +69,29 @@ def display_envelope():
 
 def display_invitation_card(data, image_bytes=None):
     theme = THEMES[data["theme"]]
+    # Improved background fit: use 'cover', add overlay for readability
     background_style = ""
+    overlay = ""
     if image_bytes:
-        background_style = f"background: url('data:image/png;base64,{image_bytes}'); background-size: cover; background-repeat:no-repeat; background-position:center;"
+        background_style = (
+            f"background: url('data:image/png;base64,{image_bytes}') center center / cover no-repeat;"
+            "background-blend-mode: lighten;"
+            "position: relative;"
+        )
+        overlay = "<div style='position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.72);z-index:0;border-radius:16px;'></div>"
     st.markdown(
         f"""
-        <div style="{background_style}background-color:{theme['bg']};padding:2em 2em 1em 2em;border-radius:16px;border:2px solid {theme['accent']};font-family:{FONT_FAMILY};box-shadow:2px 2px 20px #a80000;">
-            <div style="text-align:center;">
+        <div style="position:relative;{background_style}background-color:{theme['bg']};padding:2em 2em 1em 2em;border-radius:16px;border:2px solid {theme['accent']};font-family:{FONT_FAMILY};box-shadow:2px 2px 20px #a80000;overflow:hidden;">
+            {overlay}
+            <div style="text-align:center;position:relative;z-index:1;">
                 {f"<div style='font-size:1.2em;color:#a80000;font-weight:bold;margin-bottom:1em;'>{data['invocation']}</div>" if data['invocation'] else ""}
                 <span style="font-size:2.3em;color:{theme['accent']};font-weight:bold;">{data['event_name']}</span><br>
                 <span style="font-size:1.2em;color:#444;">Hosted by {data['host_names']}</span><br>
                 <span style="font-size:1em;color:#444;">{data['event_date']} at {data['event_time']}</span><br>
                 <span style="font-size:1em;color:#444;">Venue: {data['venue_address']}</span>
             </div>
-            <hr style="border:1px solid {theme['accent']};margin:2em 0;">
-            <div style="font-size:1.15em;color:#222;margin:1em 0 0.5em 0;padding:1em 0;">
+            <hr style="border:1px solid {theme['accent']};margin:2em 0;position:relative;z-index:1;">
+            <div style="font-size:1.15em;color:#222;margin:1em 0 0.5em 0;padding:1em 0;position:relative;z-index:1;">
                 {data['invitation_message']}
             </div>
         </div>
@@ -103,7 +111,6 @@ st.markdown(
 invite_id = st.query_params.get("invite", None)
 
 if invite_id:
-    # Envelope animation (simulated)
     data = load_invitation(invite_id)
     if data:
         image_bytes = data.get("image_base64")
@@ -163,7 +170,6 @@ if invite_id:
     else:
         st.error("Invitation not found.")
 else:
-    # Invitation Form
     with st.form("invitation_form"):
         event_name = st.text_input("Event Name")
         host_names = st.text_input("Host Names")
@@ -243,5 +249,4 @@ st.markdown("""
 
 3. **Share the public link**
     - Copy and share the deployed app's URL!
-
 """)
