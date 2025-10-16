@@ -442,12 +442,9 @@ def get_base_url():
     if manual_url:
         return manual_url
     
-    # Simple approach: Check if we're on Streamlit Cloud
-    # Streamlit Cloud typically sets these environment variables
-    if os.getenv("STREAMLIT_CLOUD") or os.getenv("STREAMLIT_CLOUD_BASE_URL"):
-        return "https://hemanthverse.streamlit.app"
-    else:
-        return "http://localhost:8501"
+    # For testing purposes, use Streamlit Cloud URL even locally
+    # This allows testing of generated links before deployment
+    return "https://hemanthverse.streamlit.app"
 
 def save_rsvp(invite_id, rsvp_entry):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
