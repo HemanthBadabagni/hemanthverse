@@ -1271,34 +1271,3 @@ elif current_page == "public":
     # PAGE 3: Public Invite Page
     show_public_invite_page()
 
-# --- Deployment Instructions (admin only) ---
-if is_admin and current_page == "creation":
-    st.markdown("---")
-st.markdown("""
-### Deployment Instructions
-
-1. **Push code to GitHub**
-    - Add `app.py` and `requirements.txt` to your repo.
-
-2. **Deploy to Streamlit Cloud**
-    - Go to [Streamlit Cloud](https://share.streamlit.io)
-    - Connect your GitHub repo (`HemanthBadabagni/hemanthverse`)
-    - Choose `app.py` as entrypoint and deploy.
-    - The public link will look like:  
-      `https://share.streamlit.io/HemanthBadabagni/hemanthverse/app.py`
-
-3. **Share the public link**
-    - Your guests can access invitations via: `https://your-app-url.com?invite=INVITE_ID`
-    - Admin dashboard: `https://your-app-url.com?invite=INVITE_ID&admin=true`
-
-4. **Environment Variables (for email)**
-    - Set these in Streamlit Cloud secrets:
-    ```toml
-    SMTP_USER = "your-email@gmail.com"
-    SMTP_PASS = "your-app-password"
-    SMTP_HOST = "smtp.gmail.com"
-    SMTP_PORT = "587"
-    SMTP_TLS = "true"
-    RSVP_NOTIFY_EMAIL = "your-notification-email@gmail.com"
-    ```
-""")
