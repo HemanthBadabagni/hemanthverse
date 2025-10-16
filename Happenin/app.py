@@ -442,9 +442,8 @@ def get_base_url():
     if manual_url:
         return manual_url
     
-    # For testing purposes, use Streamlit Cloud URL even locally
-    # This allows testing of generated links before deployment
-    return "https://hemanthverse.streamlit.app"
+    # Use the actual deployed Streamlit Cloud URL
+    return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
 
 def save_rsvp(invite_id, rsvp_entry):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
