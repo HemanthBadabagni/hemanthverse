@@ -134,9 +134,9 @@ def get_smtp_config():
         return {
             'user': env_user,
             'password': env_pass,
-            'host': os.getenv("SMTP_HOST", "smtp.gmail.com"),
-            'port': os.getenv("SMTP_PORT", "587"),
-            'tls': os.getenv("SMTP_TLS", "true"),
+            'host': os.getenv("SMTP_HOST"),
+            'port': os.getenv("SMTP_PORT"),
+            'tls': os.getenv("SMTP_TLS"),
             'notify_email': ""  # No default - should come from invitation manager_email
         }
     
@@ -146,9 +146,9 @@ def get_smtp_config():
         return {
             'user': st.secrets["SMTP_USER"],
             'password': st.secrets["SMTP_PASS"],
-            'host': st.secrets.get("SMTP_HOST", "smtp.gmail.com"),
-            'port': st.secrets.get("SMTP_PORT", "587"),
-            'tls': st.secrets.get("SMTP_TLS", "true"),
+            'host': st.secrets.get("SMTP_HOST"),
+            'port': st.secrets.get("SMTP_PORT"),
+            'tls': st.secrets.get("SMTP_TLS"),
             'notify_email': ""  # No default - should come from invitation manager_email
         }
     except:
@@ -156,9 +156,9 @@ def get_smtp_config():
         return {
             'user': None,
             'password': None,
-            'host': "smtp.gmail.com",
-            'port': "587",
-            'tls': "true",
+            'host': None,
+            'port': None,
+            'tls': None,
             'notify_email': ""
         }
 
@@ -170,11 +170,11 @@ def send_rsvp_email(invite_id, rsvp_entry):
     2) No fallback - email will only be sent if manager_email is provided
 
     Expected environment variables (if using SMTP):
-      - SMTP_HOST (default: smtp.gmail.com)
-      - SMTP_PORT (default: 587)
-      - SMTP_USER
-      - SMTP_PASS
-      - SMTP_TLS (default: true)
+      - SMTP_USER (required)
+      - SMTP_PASS (required)
+      - SMTP_HOST (required)
+      - SMTP_PORT (required)
+      - SMTP_TLS (required)
     """
     invite_data = load_invitation(invite_id) or {}
     
