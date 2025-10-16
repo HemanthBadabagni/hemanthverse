@@ -50,15 +50,15 @@ Create • Share • Celebrate
    pip install -r requirements.txt
    ```
 
-3. **Set up email configuration**
+3. **Set up email configuration (optional)**
    ```bash
    export SMTP_USER="your-email@gmail.com"
    export SMTP_PASS="your-app-password"
    export SMTP_HOST="smtp.gmail.com"
    export SMTP_PORT="587"
    export SMTP_TLS="true"
-   export RSVP_NOTIFY_EMAIL="your-notification-email@gmail.com"
    ```
+   **Note**: Email notifications are optional. The app works without SMTP configuration.
 
 4. **Run the application**
    ```bash
@@ -83,9 +83,9 @@ Create • Share • Celebrate
    - Connect your GitHub repository
    - Deploy your app
 
-3. **Configure Secrets**
+3. **Configure Secrets (optional)**
    - Go to Settings → Secrets
-   - Add SMTP configuration:
+   - Add SMTP configuration for email notifications:
    ```toml
    [secrets]
    SMTP_USER = "your-email@gmail.com"
@@ -93,8 +93,8 @@ Create • Share • Celebrate
    SMTP_HOST = "smtp.gmail.com"
    SMTP_PORT = "587"
    SMTP_TLS = "true"
-   RSVP_NOTIFY_EMAIL = "your-notification-email@gmail.com"
    ```
+   **Note**: Email notifications are optional. The app works without SMTP configuration.
 
 ## 📁 Project Structure
 
@@ -143,8 +143,9 @@ Create • Share • Celebrate
 ### **Email Features**
 - **Subject Format**: `Event Name - Guest Name - Yes/No`
 - **HTML Templates**: Professional, responsive design
-- **Real-time Delivery**: Instant notifications
+- **Real-time Delivery**: Instant notifications to event manager email
 - **Test Functions**: Verify email functionality
+- **Graceful Handling**: App works without SMTP configuration
 
 ## 🔧 Technical Details
 
@@ -207,6 +208,10 @@ Tests include:
 ## 📄 License
 
 This project is open source and available under the [MIT License](LICENSE).
+
+## 🌐 Live Demo
+
+**Try Happenin now**: [https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app](https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app)
 
 ## 🆘 Support
 
