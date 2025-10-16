@@ -439,19 +439,17 @@ def load_invitation(invite_id):
         return None
 
 def get_base_url():
-    # Auto-detect Streamlit Cloud deployment
-    if os.getenv("STREAMLIT_CLOUD"):
-        # Running on Streamlit Cloud - try to get the actual URL
-        # Streamlit Cloud sets STREAMLIT_CLOUD_BASE_URL environment variable
-        cloud_url = os.getenv("STREAMLIT_CLOUD_BASE_URL")
-        if cloud_url:
-            return cloud_url
-        else:
-            # Fallback to the known URL pattern
-            return "https://hemanthverse.streamlit.app"
+    # Check for manual override first
+    manual_url = os.getenv("APP_BASE_URL")
+    if manual_url:
+        return manual_url
+    
+    # Simple approach: Check if we're on Streamlit Cloud
+    # Streamlit Cloud typically sets these environment variables
+    if os.getenv("STREAMLIT_CLOUD") or os.getenv("STREAMLIT_CLOUD_BASE_URL"):
+        return "https://hemanthverse.streamlit.app"
     else:
-        # Local development - use localhost
-        return os.getenv("APP_BASE_URL", "http://localhost:8501")
+        return "http://localhost:8501"
 
 def save_rsvp(invite_id, rsvp_entry):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
@@ -1015,6 +1013,20 @@ def show_event_admin_page():
         return
     
     st.markdown("## 🛠️ Event Admin Dashboard")
+    
+    # Debug section for URL troubleshooting
+    with st.expander("🔧 Debug Info (for troubleshooting)", expanded=False):
+        st.markdown("**Current URL Detection:**")
+        st.code(f"Base URL: {get_base_url()}")
+        st.markdown("**Environment Variables:**")
+        st.code(f"STREAMLIT_CLOUD: {os.getenv('STREAMLIT_CLOUD')}")
+        st.code(f"STREAMLIT_CLOUD_BASE_URL: {os.getenv('STREAMLIT_CLOUD_BASE_URL')}")
+        st.code(f"STREAMLIT_SHARING_MODE: {os.getenv('STREAMLIT_SHARING_MODE')}")
+        st.markdown("**Generated URLs:**")
+        admin_url = f"{get_base_url()}?invite={invite_id}&admin=true"
+        public_url = f"{get_base_url()}?invite={invite_id}"
+        st.code(f"Admin URL: {admin_url}")
+        st.code(f"Public URL: {public_url}")
     
     # Event details
     col1, col2 = st.columns([2, 1])
