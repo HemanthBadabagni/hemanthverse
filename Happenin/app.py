@@ -137,7 +137,7 @@ def get_smtp_config():
             'host': os.getenv("SMTP_HOST", "smtp.gmail.com"),
             'port': os.getenv("SMTP_PORT", "587"),
             'tls': os.getenv("SMTP_TLS", "true"),
-            'notify_email': os.getenv("RSVP_NOTIFY_EMAIL", "")
+            'notify_email': ""  # No default - should come from invitation manager_email
         }
     
     # Fallback to Streamlit secrets (deployment)
@@ -149,7 +149,7 @@ def get_smtp_config():
             'host': st.secrets.get("SMTP_HOST", "smtp.gmail.com"),
             'port': st.secrets.get("SMTP_PORT", "587"),
             'tls': st.secrets.get("SMTP_TLS", "true"),
-            'notify_email': st.secrets.get("RSVP_NOTIFY_EMAIL", "")
+            'notify_email': ""  # No default - should come from invitation manager_email
         }
     except:
         # No configuration found
@@ -166,9 +166,8 @@ def send_rsvp_email(invite_id, rsvp_entry):
     """Send an email notification for a new RSVP if SMTP env vars are set.
 
     Priority for recipient address:
-    1) `manager_email` stored in the invite payload
-    2) `RSVP_NOTIFY_EMAIL` environment variable
-    3) Default fallback to provided testing email
+    1) `manager_email` stored in the invite payload (from Event manager email field)
+    2) No fallback - email will only be sent if manager_email is provided
 
     Expected environment variables (if using SMTP):
       - SMTP_HOST (default: smtp.gmail.com)
@@ -182,13 +181,12 @@ def send_rsvp_email(invite_id, rsvp_entry):
     # Get SMTP configuration
     smtp_config = get_smtp_config()
     
-    # Prefer invite's manager_email; otherwise use configured notify email
-    notify_to = invite_data.get("manager_email") or smtp_config['notify_email']
+    # Use only the manager_email from the invitation (no fallback)
+    notify_to = invite_data.get("manager_email")
     
     # Debug logging to help identify the source of invalid emails
     logger.info(f"RSVP email recipient: {notify_to}")
     logger.info(f"Manager email from invite: {invite_data.get('manager_email')}")
-    logger.info(f"Notify email from config: {smtp_config['notify_email']}")
     
     # Validate email address format
     import re
