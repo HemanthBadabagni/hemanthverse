@@ -190,6 +190,7 @@ def send_rsvp_email(invite_id, rsvp_entry):
     
     # Validate email address format
     import re
+    notify_to = notify_to.strip() if notify_to else notify_to
     email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     if notify_to and not re.match(email_pattern, notify_to):
         logger.warning(f"Invalid email address format: {notify_to}")
@@ -303,6 +304,9 @@ def send_test_email(to_address: str):
     Returns (ok, message)
     """
     smtp_config = get_smtp_config()
+    
+    # Clean the email address
+    to_address = to_address.strip() if to_address else to_address
     
     if not (smtp_config['user'] and smtp_config['password'] and to_address):
         return False, "Missing SMTP_USER/SMTP_PASS or recipient"
