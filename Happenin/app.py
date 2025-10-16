@@ -606,12 +606,12 @@ def display_invitation_card(data, image_bytes=None, text_color="#000000", font_s
                 <span style="font-size:{2.8*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:2px 2px 4px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">{data['event_name']}</span>
             </div>
             <br>
-            <span style="font-size:{1.4*font_scale:.2f}em;color:{text_color};font-weight:600;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">Hosted by {data['host_names']}</span><br>
-            <span style="font-size:{1.2*font_scale:.2f}em;color:{text_color};font-weight:500;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">{data['event_date']} at {data['event_time']}</span><br>
-            <span style="font-size:{1.1*font_scale:.2f}em;color:{text_color};font-weight:500;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">Venue: {data['venue_address']}</span>
+            <span style="font-size:{1.4*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">Hosted by {data['host_names']}</span><br>
+            <span style="font-size:{1.2*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">{data['event_date']} at {data['event_time']}</span><br>
+            <span style="font-size:{1.1*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">Venue: {data['venue_address']}</span>
         </div>
         <hr style="border:2px solid {text_color};margin:2em 0;position:relative;z-index:2;box-shadow:1px 1px 2px rgba(255,255,255,0.9);">
-        <div style="font-size:{1.2*font_scale:.2f}em;color:{text_color};margin:1em 0 0.5em 0;padding:1em 0;position:relative;z-index:2;font-weight:500;text-shadow:1px 1px 2px rgba(255,255,255,0.9);line-height:1.6;word-wrap:break-word;">
+        <div style="font-size:{1.2*font_scale:.2f}em;color:{text_color};margin:1em 0 0.5em 0;padding:1em 0;position:relative;z-index:2;font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);line-height:1.6;word-wrap:break-word;">
                 {data['invitation_message']}
             </div>
         </div>
