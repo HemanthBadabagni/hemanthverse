@@ -1,0 +1,19 @@
+# Happenin Logo - Text Version
+# This file contains the ASCII art logo for Happenin
+
+████████████████████████████████
+██      H A P P E N I N      ██
+████████████████████████████████
+
+Create • Share • Celebrate
+
+# Usage Instructions:
+# - Copy the ASCII art above
+# - Use in terminal, text files, or documentation
+# - Font: Monospace (Courier New, Monaco, etc.)
+# - Colors: Red background (#a80000), Gold text (#ffd700)
+
+# SVG Version: happenin_logo.svg
+# - Scalable vector format
+# - Can be used in web applications
+# - Professional quality at any size

@@ -321,87 +321,81 @@ class TestRSVPFunctionality(unittest.TestCase):
         if os.path.exists(self.test_dir):
             shutil.rmtree(self.test_dir)
     
-    @patch('app.DB_PATH', new_callable=lambda: "invitations")
-    def test_save_rsvp(self, mock_db_path):
+    def test_save_rsvp(self):
         """Test saving RSVP data"""
-        os.makedirs("invitations", exist_ok=True)
-        
-        invite_id = "test-invite-123"
-        rsvp_entry = {
-            "name": "John Doe",
-            "email": "john@example.com",
-            "response": "Yes",
-            "message": "Looking forward to it!",
-            "timestamp": "2025-10-15T00:00:00"
-        }
-        
-        save_rsvp(invite_id, rsvp_entry)
-        
-        # Check that RSVP file was created
-        rsvp_file = f"invitations/rsvp_{invite_id}.json"
-        self.assertTrue(os.path.exists(rsvp_file))
-        
-        # Check file contents
-        with open(rsvp_file, 'r') as f:
-            saved_rsvps = json.load(f)
-        
-        self.assertEqual(len(saved_rsvps), 1)
-        self.assertEqual(saved_rsvps[0]["name"], "John Doe")
-        self.assertEqual(saved_rsvps[0]["response"], "Yes")
+        with patch('app.DB_PATH', self.test_dir):
+            invite_id = "test-invite-123"
+            rsvp_entry = {
+                "name": "John Doe",
+                "email": "john@example.com",
+                "response": "Yes",
+                "message": "Looking forward to it!",
+                "timestamp": "2025-10-15T00:00:00"
+            }
+            
+            save_rsvp(invite_id, rsvp_entry)
+            
+            # Check that RSVP file was created
+            rsvp_file = os.path.join(self.test_dir, f"rsvp_{invite_id}.json")
+            self.assertTrue(os.path.exists(rsvp_file))
+            
+            # Check file contents
+            with open(rsvp_file, 'r') as f:
+                saved_rsvps = json.load(f)
+            
+            self.assertEqual(len(saved_rsvps), 1)
+            self.assertEqual(saved_rsvps[0]["name"], "John Doe")
+            self.assertEqual(saved_rsvps[0]["response"], "Yes")
     
-    @patch('app.DB_PATH', new_callable=lambda: "invitations")
-    def test_load_rsvps(self, mock_db_path):
+    def test_load_rsvps(self):
         """Test loading RSVP data"""
-        os.makedirs("invitations", exist_ok=True)
-        
-        invite_id = "test-invite-123"
-        rsvp_entry = {
-            "name": "Jane Smith",
-            "email": "jane@example.com",
-            "response": "No",
-            "message": "Sorry, can't make it",
-            "timestamp": "2025-10-15T00:00:00"
-        }
-        
-        # Save RSVP first
-        save_rsvp(invite_id, rsvp_entry)
-        
-        # Load RSVPs
-        loaded_rsvps = load_rsvps(invite_id)
-        
-        self.assertEqual(len(loaded_rsvps), 1)
-        self.assertEqual(loaded_rsvps[0]["name"], "Jane Smith")
-        self.assertEqual(loaded_rsvps[0]["response"], "No")
+        with patch('app.DB_PATH', self.test_dir):
+            invite_id = "test-invite-123"
+            rsvp_entry = {
+                "name": "Jane Smith",
+                "email": "jane@example.com",
+                "response": "No",
+                "message": "Sorry, can't make it",
+                "timestamp": "2025-10-15T00:00:00"
+            }
+            
+            # Save RSVP first
+            save_rsvp(invite_id, rsvp_entry)
+            
+            # Load RSVPs
+            loaded_rsvps = load_rsvps(invite_id)
+            
+            self.assertEqual(len(loaded_rsvps), 1)
+            self.assertEqual(loaded_rsvps[0]["name"], "Jane Smith")
+            self.assertEqual(loaded_rsvps[0]["response"], "No")
     
-    @patch('app.DB_PATH', new_callable=lambda: "invitations")
-    def test_get_rsvp_analytics(self, mock_db_path):
+    def test_get_rsvp_analytics(self):
         """Test RSVP analytics calculation"""
-        os.makedirs("invitations", exist_ok=True)
-        
-        invite_id = "test-invite-123"
-        
-        # Add multiple RSVPs
-        rsvps = [
-            {"name": "Alice", "email": "alice@example.com", "response": "Yes", "message": "", "timestamp": "2025-10-15T00:00:00"},
-            {"name": "Bob", "email": "bob@example.com", "response": "Yes", "message": "Excited!", "timestamp": "2025-10-15T00:01:00"},
-            {"name": "Charlie", "email": "charlie@example.com", "response": "No", "message": "Out of town", "timestamp": "2025-10-15T00:02:00"},
-            {"name": "Diana", "email": "diana@example.com", "response": "Maybe", "message": "Will confirm later", "timestamp": "2025-10-15T00:03:00"},
-            {"name": "Eve", "email": "eve@example.com", "response": "Yes", "message": "", "timestamp": "2025-10-15T00:04:00"}
-        ]
-        
-        for rsvp in rsvps:
-            save_rsvp(invite_id, rsvp)
-        
-        # Get analytics
-        analytics = get_rsvp_analytics(invite_id)
-        
-        self.assertEqual(analytics["total"], 5)
-        self.assertEqual(analytics["yes"], 3)
-        self.assertEqual(analytics["no"], 1)
-        self.assertEqual(analytics["maybe"], 1)
-        self.assertEqual(len(analytics["yes_list"]), 3)
-        self.assertEqual(len(analytics["no_list"]), 1)
-        self.assertEqual(len(analytics["maybe_list"]), 1)
+        with patch('app.DB_PATH', self.test_dir):
+            invite_id = "test-invite-123"
+            
+            # Add multiple RSVPs
+            rsvps = [
+                {"name": "Alice", "email": "alice@example.com", "response": "Yes", "message": "", "timestamp": "2025-10-15T00:00:00"},
+                {"name": "Bob", "email": "bob@example.com", "response": "Yes", "message": "Excited!", "timestamp": "2025-10-15T00:01:00"},
+                {"name": "Charlie", "email": "charlie@example.com", "response": "No", "message": "Out of town", "timestamp": "2025-10-15T00:02:00"},
+                {"name": "Diana", "email": "diana@example.com", "response": "Maybe", "message": "Will confirm later", "timestamp": "2025-10-15T00:03:00"},
+                {"name": "Eve", "email": "eve@example.com", "response": "Yes", "message": "", "timestamp": "2025-10-15T00:04:00"}
+            ]
+            
+            for rsvp in rsvps:
+                save_rsvp(invite_id, rsvp)
+            
+            # Get analytics
+            analytics = get_rsvp_analytics(invite_id)
+            
+            self.assertEqual(analytics["total"], 5)
+            self.assertEqual(analytics["yes"], 3)
+            self.assertEqual(analytics["no"], 1)
+            self.assertEqual(analytics["maybe"], 1)
+            self.assertEqual(len(analytics["yes_list"]), 3)
+            self.assertEqual(len(analytics["no_list"]), 1)
+            self.assertEqual(len(analytics["maybe_list"]), 1)
 
 def run_tests():
     """Run all test cases"""

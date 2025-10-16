@@ -1,189 +1,224 @@
-# HemanthVerse Invitations 🎉
+# 🎉 Happenin — Create, Share, Celebrate
 
-A beautiful Streamlit application for creating traditional Indian ceremony invitations with local file support and comprehensive testing.
+A beautiful, modern web application for creating and sharing traditional Indian ceremony invitations with RSVP functionality.
 
-## 🎯 Event Details
+```
+████████████████████████████████
+██      H A P P E N I N      ██
+████████████████████████████████
 
-**Event Name:** Shubha Gruha Praveshah  
-**Host Names:** Mounika, Hemanth & Viraj  
-**Date:** November 13, 2025  
-**Time:** 4:00 PM  
-**Venue:** 3108 Honerywood Drive, Leander, TX -78641  
-**Invocation:** ॐ श्री गणेशाय नमः  
+Create • Share • Celebrate
+```
+
+## ✨ Features
+
+### 🎨 **Beautiful Invitations**
+- **Customizable Design**: Font colors, sizes, background overlays
+- **Responsive Images**: Perfect fit, no cropping, crisp display
+- **Traditional Themes**: Temple, Wedding, Festival themes
+- **Background Music**: Auto-play music for enhanced experience
+
+### 📧 **Email Notifications**
+- **HTML Email Templates**: Professional, clean design
+- **Real-time Notifications**: Instant RSVP alerts to event managers
+- **Test Email Function**: Verify email functionality
+- **SMTP Configuration**: Works on all deployment platforms
+
+### 📊 **RSVP Management**
+- **Live Analytics**: Real-time RSVP counts and statistics
+- **Guest Details**: Name, email, attendance, guest counts
+- **Persistent Data**: Links work forever, data never lost
+- **Export Options**: CSV download for guest lists
+
+### 🌐 **3-Page Architecture**
+- **Page 1**: Event Creation - Design your invitation
+- **Page 2**: Admin Dashboard - Manage RSVPs and analytics
+- **Page 3**: Public Invite - Guest-facing invitation with RSVP
+
+## 🚀 Quick Start
+
+### **Local Development**
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd Happenin
+   ```
+
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Set up email configuration**
+   ```bash
+   export SMTP_USER="your-email@gmail.com"
+   export SMTP_PASS="your-app-password"
+   export SMTP_HOST="smtp.gmail.com"
+   export SMTP_PORT="587"
+   export SMTP_TLS="true"
+   export RSVP_NOTIFY_EMAIL="your-notification-email@gmail.com"
+   ```
+
+4. **Run the application**
+   ```bash
+   streamlit run app.py
+   ```
+
+5. **Open your browser**
+   - Go to `http://localhost:8501`
+   - Start creating beautiful invitations!
+
+### **Deployment (Streamlit Cloud)**
+
+1. **Push to GitHub**
+   ```bash
+   git add .
+   git commit -m "Deploy Happenin app"
+   git push origin main
+   ```
+
+2. **Deploy on Streamlit Cloud**
+   - Go to [share.streamlit.io](https://share.streamlit.io)
+   - Connect your GitHub repository
+   - Deploy your app
+
+3. **Configure Secrets**
+   - Go to Settings → Secrets
+   - Add SMTP configuration:
+   ```toml
+   [secrets]
+   SMTP_USER = "your-email@gmail.com"
+   SMTP_PASS = "your-app-password"
+   SMTP_HOST = "smtp.gmail.com"
+   SMTP_PORT = "587"
+   SMTP_TLS = "true"
+   RSVP_NOTIFY_EMAIL = "your-notification-email@gmail.com"
+   ```
 
 ## 📁 Project Structure
 
 ```
-Happenin/
-├── app.py                          # Main Streamlit application
-├── IMG_7653.PNG                    # Background image for invitations
-├── mridangam-tishra-33904.mp3      # Background music
-├── requirements.txt                 # Python dependencies
-├── test_invitations.py             # Comprehensive test suite
-├── local_preview.py                # Local testing script
-└── README.md                       # This file
+📁 Happenin/
+├── app.py                    # Main Streamlit application
+├── requirements.txt          # Python dependencies
+├── happenin_logo.svg         # Logo (SVG format)
+├── happenin_logo.txt         # Logo (ASCII art)
+├── DEPLOYMENT_GUIDE.md       # Detailed deployment instructions
+├── README.md                 # This file
+├── invitations/              # Auto-created data folder
+│   ├── {invite_id}.json     # Invitation data
+│   └── rsvp_{invite_id}.json # RSVP data
+└── test_invitations.py       # Unit tests
 ```
 
-## 🚀 Quick Start
+## 🎯 How to Use
 
-### Option 1: Using Local Preview Script (Recommended)
-```bash
-python local_preview.py
-```
-Follow the interactive menu to:
-1. Check files and dependencies
-2. Install dependencies
-3. Run tests
-4. Start local preview
+### **1. Create an Invitation**
+- Fill in event details (name, date, venue, etc.)
+- Upload background image and music
+- Customize fonts and colors
+- Generate your invitation link
 
-### Option 2: Manual Setup
-```bash
-# Install dependencies
-pip install -r requirements.txt
+### **2. Share Your Invitation**
+- Copy the public link
+- Share via WhatsApp, email, or social media
+- Guests can RSVP directly on the link
 
-# Run tests
-python test_invitations.py
+### **3. Manage RSVPs**
+- Use the admin dashboard to view analytics
+- See real-time RSVP counts
+- Export guest lists to CSV
+- Test email notifications
 
-# Start the app
-streamlit run app.py
-```
+## 📧 Email Setup
 
-## 🧪 Testing Features
+### **Gmail Configuration**
+1. **Enable 2FA** on your Gmail account
+2. **Generate App Password**:
+   - Go to Google Account → Security → App passwords
+   - Generate password for "Mail"
+   - Use this password (not your regular password)
 
-### Local Testing Section
-The app includes a dedicated testing section with:
-- **Create Test Invitation**: Generates a test invitation using your local files
-- **Load Test Data**: Pre-fills the form with the provided event data
-- **Local Preview**: Shows the invitation without deployment
-- **Test URL**: Provides a local URL for testing
-
-### Test Suite
-Comprehensive test coverage including:
-- ✅ Data validation tests
-- ✅ File handling tests
-- ✅ Storage and retrieval tests
-- ✅ Test data structure validation
-- ✅ Error handling tests
-
-Run tests with:
-```bash
-python test_invitations.py
-```
-
-## 🎨 Features
-
-### Invitation Creation
-- **Event Details**: Name, hosts, date, time, venue
-- **Customization**: Themes, invocation, invitation message
-- **Media Support**: Background images and music
-- **Validation**: Comprehensive form validation
-
-### Themes Available
-- **Floral**: Warm floral design with red accents
-- **Temple**: Traditional temple theme with gold accents
-- **Simple Gold**: Clean gold theme
-- **Classic Red**: Traditional red theme
-
-### RSVP System
-- Guest name and email collection
-- Attendance confirmation (Yes/No/Maybe)
-- Response tracking and display
-- Timestamp recording
-
-### Sharing Features
-- WhatsApp sharing integration
-- Email sharing integration
-- Downloadable background images
-- Shareable invitation links
+### **Email Features**
+- **Subject Format**: `Event Name - Guest Name - Yes/No`
+- **HTML Templates**: Professional, responsive design
+- **Real-time Delivery**: Instant notifications
+- **Test Functions**: Verify email functionality
 
 ## 🔧 Technical Details
 
-### Dependencies
-- `streamlit>=1.28.0`: Web application framework
-- `Pillow>=10.0.0`: Image processing
+### **Built With**
+- **Streamlit**: Web application framework
+- **Python**: Backend logic
+- **HTML/CSS**: Custom styling and templates
+- **SMTP**: Email notifications
+- **JSON**: Data persistence
+- **UUID**: Unique invitation IDs
 
-### File Handling
-- Local file loading with base64 encoding
-- Image processing and optimization
-- Audio file support (MP3/WAV)
-- Error handling for missing files
+### **Data Persistence**
+- **File-based Storage**: JSON files for invitations and RSVPs
+- **Persistent Links**: Invitation URLs work forever
+- **Real-time Updates**: RSVP counts update immediately
+- **Historical Data**: All RSVPs saved with timestamps
 
-### Data Storage
-- JSON-based invitation storage
-- UUID-based invitation IDs
-- RSVP data persistence
-- Local file system storage
+### **Deployment Platforms**
+- ✅ **Streamlit Cloud** (Recommended)
+- ✅ **Heroku**
+- ✅ **Railway**
+- ✅ **DigitalOcean**
+- ✅ **AWS/GCP/Azure**
 
-## 🌐 Deployment
+## 🧪 Testing
 
-### Streamlit Cloud
-1. Push code to GitHub repository
-2. Connect to [Streamlit Cloud](https://share.streamlit.io)
-3. Deploy with `app.py` as entrypoint
-4. Share the public URL
+Run the test suite:
+```bash
+python test_invitations.py
+```
 
-### Local Development
-- Use `local_preview.py` for easy local testing
-- Test with local files before deployment
-- Validate functionality with test suite
+Tests include:
+- Invitation creation and storage
+- RSVP functionality
+- Email sending
+- Data persistence
+- File handling
 
-## 🎯 Usage Instructions
+## 📊 Features Overview
 
-### Creating an Invitation
-1. **Fill Form**: Enter event details, hosts, date, time, venue
-2. **Add Media**: Upload background image and music (optional)
-3. **Choose Theme**: Select from available themes
-4. **Preview**: Review the invitation before generating
-5. **Generate Link**: Create shareable invitation URL
-6. **Share**: Use WhatsApp/Email sharing or direct link
+| Feature | Status | Description |
+|---------|--------|-------------|
+| 🎨 Custom Invitations | ✅ | Beautiful, customizable designs |
+| 📧 Email Notifications | ✅ | HTML emails with real-time delivery |
+| 📊 RSVP Analytics | ✅ | Live counts and detailed statistics |
+| 💾 Data Persistence | ✅ | Links work forever, data never lost |
+| 🌐 Multi-page UI | ✅ | Clean 3-page architecture |
+| 📱 Responsive Design | ✅ | Works on all devices |
+| 🎵 Background Music | ✅ | Auto-play music support |
+| 📤 Export Options | ✅ | CSV download for guest lists |
 
-### Testing Locally
-1. **Use Test Data**: Click "Load Test Data" to pre-fill form
-2. **Create Test Invitation**: Use local files for testing
-3. **Preview**: See invitation with your local assets
-4. **Test RSVP**: Validate RSVP functionality
-5. **Share Test**: Use local URL for testing
+## 🤝 Contributing
 
-### RSVP Management
-- Guests can RSVP through the invitation link
-- Responses are stored locally
-- View all RSVPs on the invitation page
-- Track attendance status and timestamps
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-## 🐛 Troubleshooting
+## 📄 License
 
-### Common Issues
-1. **Missing Files**: Ensure all required files are in the same directory
-2. **Dependencies**: Run `pip install -r requirements.txt`
-3. **Port Conflicts**: Ensure port 8501 is available
-4. **File Permissions**: Check read permissions for image/audio files
+This project is open source and available under the [MIT License](LICENSE).
 
-### Error Messages
-- **Validation Errors**: Check required fields are filled
-- **File Errors**: Verify file formats and permissions
-- **Storage Errors**: Check write permissions for invitations folder
+## 🆘 Support
 
-## 📝 Development Notes
+For support or questions:
+- Check the [Deployment Guide](DEPLOYMENT_GUIDE.md)
+- Open an issue on GitHub
+- Review the test files for examples
 
-### Code Structure
-- **Modular Design**: Separate functions for different features
-- **Error Handling**: Comprehensive try-catch blocks
-- **Logging**: Built-in logging for debugging
-- **Validation**: Input validation at multiple levels
+## 🎊 Acknowledgments
 
-### Testing Strategy
-- **Unit Tests**: Individual function testing
-- **Integration Tests**: End-to-end workflow testing
-- **Mock Testing**: Isolated testing with mocked dependencies
-- **File Testing**: Local file handling validation
-
-## 🎉 Event Information
-
-This invitation system is specifically configured for:
-
-**Shubha Gruha Praveshah** - A housewarming ceremony celebrating the divine blessings of Lord Venkateswara. The invitation includes traditional Sanskrit invocation and creates a beautiful, shareable digital invitation perfect for modern celebrations while maintaining cultural authenticity.
+Built with ❤️ for creating beautiful, memorable invitations for traditional Indian ceremonies.
 
 ---
 
-*Created with ❤️ for traditional Indian ceremonies*
-
+**Happenin** — Where every celebration begins with a beautiful invitation! 🎉
