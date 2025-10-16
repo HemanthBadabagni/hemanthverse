@@ -439,8 +439,19 @@ def load_invitation(invite_id):
         return None
 
 def get_base_url():
-    # Use local base URL by default; override in deployment via APP_BASE_URL
-    return os.getenv("APP_BASE_URL", "http://localhost:8501")
+    # Auto-detect Streamlit Cloud deployment
+    if os.getenv("STREAMLIT_CLOUD"):
+        # Running on Streamlit Cloud - try to get the actual URL
+        # Streamlit Cloud sets STREAMLIT_CLOUD_BASE_URL environment variable
+        cloud_url = os.getenv("STREAMLIT_CLOUD_BASE_URL")
+        if cloud_url:
+            return cloud_url
+        else:
+            # Fallback to the known URL pattern
+            return "https://hemanthverse.streamlit.app"
+    else:
+        # Local development - use localhost
+        return os.getenv("APP_BASE_URL", "http://localhost:8501")
 
 def save_rsvp(invite_id, rsvp_entry):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
