@@ -10,24 +10,24 @@
 
 ```toml
 [secrets]
-SMTP_USER = "happenin.app25@gmail.com"
-SMTP_PASS = "oluc qduv cszp npnk"
+SMTP_USER = "your-email@gmail.com"
+SMTP_PASS = "your-app-password"
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = "587"
 SMTP_TLS = "true"
-RSVP_NOTIFY_EMAIL = "hemanthb.0445@gmail.com"
+RSVP_NOTIFY_EMAIL = "your-notification-email@gmail.com"
 ```
 
 ### **Other Platforms**
 
 #### **Heroku:**
 ```bash
-heroku config:set SMTP_USER="happenin.app25@gmail.com"
-heroku config:set SMTP_PASS="oluc qduv cszp npnk"
+heroku config:set SMTP_USER="your-email@gmail.com"
+heroku config:set SMTP_PASS="your-app-password"
 heroku config:set SMTP_HOST="smtp.gmail.com"
 heroku config:set SMTP_PORT="587"
 heroku config:set SMTP_TLS="true"
-heroku config:set RSVP_NOTIFY_EMAIL="hemanthb.0445@gmail.com"
+heroku config:set RSVP_NOTIFY_EMAIL="your-notification-email@gmail.com"
 ```
 
 #### **Railway/DigitalOcean:**
@@ -128,7 +128,7 @@ def get_smtp_config():
 4. **Backup Data**: Regular backups of `invitations/` folder
 
 ### **Gmail Setup:**
-1. **Enable 2FA** on `happenin.app25@gmail.com`
+1. **Enable 2FA** on your Gmail account
 2. **Generate App Password**: 
    - Go to Google Account → Security → App passwords
    - Generate password for "Mail"

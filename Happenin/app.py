@@ -125,8 +125,23 @@ def choose_text_color(image_base64, mode="Auto", custom_color="#000000"):
 
 def get_smtp_config():
     """Get SMTP configuration from environment variables or Streamlit secrets"""
+    # For local development, prioritize environment variables
+    env_user = os.getenv("SMTP_USER")
+    env_pass = os.getenv("SMTP_PASS")
+    
+    if env_user and env_pass:
+        # Use environment variables (local development)
+        return {
+            'user': env_user,
+            'password': env_pass,
+            'host': os.getenv("SMTP_HOST", "smtp.gmail.com"),
+            'port': os.getenv("SMTP_PORT", "587"),
+            'tls': os.getenv("SMTP_TLS", "true"),
+            'notify_email': os.getenv("RSVP_NOTIFY_EMAIL", "")
+        }
+    
+    # Fallback to Streamlit secrets (deployment)
     try:
-        # Try Streamlit secrets first (for deployment)
         import streamlit as st
         return {
             'user': st.secrets["SMTP_USER"],
@@ -137,14 +152,14 @@ def get_smtp_config():
             'notify_email': st.secrets.get("RSVP_NOTIFY_EMAIL", "")
         }
     except:
-        # Fallback to environment variables (for local development)
+        # No configuration found
         return {
-            'user': os.getenv("SMTP_USER"),
-            'password': os.getenv("SMTP_PASS"),
-            'host': os.getenv("SMTP_HOST", "smtp.gmail.com"),
-            'port': os.getenv("SMTP_PORT", "587"),
-            'tls': os.getenv("SMTP_TLS", "true"),
-            'notify_email': os.getenv("RSVP_NOTIFY_EMAIL", "")
+            'user': None,
+            'password': None,
+            'host': "smtp.gmail.com",
+            'port': "587",
+            'tls': "true",
+            'notify_email': ""
         }
 
 def send_rsvp_email(invite_id, rsvp_entry):
@@ -287,53 +302,55 @@ def send_test_email(to_address: str):
         msg = EmailMessage()
         msg["From"] = smtp_user
         msg["To"] = to_address
-        msg["Subject"] = "HemanthVerse RSVP - Test Email"
+        msg["Subject"] = "Happenin RSVP - Test Email"
         
-        # Create HTML test email
-        html_body = """
+        # Create beautiful HTML test email matching RSVP template
+        html_body = f"""
         <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #a80000; border-bottom: 2px solid #a80000; padding-bottom: 10px;">
-                    ✅ HemanthVerse RSVP - Test Email
-                </h2>
-                
-                <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="margin-top: 0; color: #a80000;">Email System Test</h3>
-                    <p>This is a test email to verify that your RSVP email notifications are working correctly.</p>
-                    <p><strong>Status:</strong> <span style="color: #28a745;">✅ Email system is working!</span></p>
-                    <p><strong>Timestamp:</strong> """ + str(datetime.utcnow()) + """</p>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px;">
+            <div style="max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="background: #a80000; color: #fff; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+                    <h2 style="margin: 0; font-size: 24px;">🎉 Happenin Email Test</h2>
                 </div>
                 
-                <div style="background: #e9ecef; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <h4 style="margin-top: 0; color: #495057;">What this means:</h4>
-                    <ul>
-                        <li>Your SMTP settings are configured correctly</li>
-                        <li>Email notifications will be sent when guests RSVP</li>
-                        <li>HTML formatting will be preserved in emails</li>
-                    </ul>
+                <div style="padding: 30px;">
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 15px 0; color: #a80000; font-size: 18px;">✅ Email Configuration Working!</h3>
+                        <p style="margin: 0; color: #555;">Your Happenin app email notifications are properly configured and working.</p>
+                    </div>
+                    
+                    <div style="background: #e9ecef; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                        <strong>Test Details:</strong><br>
+                        • Email sent to: {to_address}<br>
+                        • SMTP Configuration: ✅ Working<br>
+                        • HTML Templates: ✅ Enabled<br>
+                        • RSVP Notifications: ✅ Ready
+                    </div>
+                    
+                    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+                        Test email sent from Happenin — Create, Share, Celebrate
+                    </div>
                 </div>
-                
-                <p style="color: #6c757d; font-size: 14px; margin-top: 30px;">
-                    This test email was automatically generated by your RSVP system.
-                </p>
             </div>
         </body>
         </html>
         """
         
-        text_body = (
-            "HemanthVerse RSVP - Test Email\n\n"
-            "Email System Test\n"
-            "This is a test email to verify that your RSVP email notifications are working correctly.\n\n"
-            "Status: ✅ Email system is working!\n"
-            f"Timestamp: {str(datetime.utcnow())}\n\n"
-            "What this means:\n"
-            "- Your SMTP settings are configured correctly\n"
-            "- Email notifications will be sent when guests RSVP\n"
-            "- HTML formatting will be preserved in emails\n\n"
-            "This test email was automatically generated by your RSVP system."
-        )
+        text_body = f"""
+Happenin Email Test
+
+✅ Email Configuration Working!
+
+Your Happenin app email notifications are properly configured and working.
+
+Test Details:
+• Email sent to: {to_address}
+• SMTP Configuration: ✅ Working
+• HTML Templates: ✅ Enabled
+• RSVP Notifications: ✅ Ready
+
+Test email sent from Happenin — Create, Share, Celebrate
+        """
         
         msg.set_content(text_body)
         msg.add_alternative(html_body, subtype="html")
@@ -609,7 +626,7 @@ st.markdown(
 # --- Page Navigation ---
 def get_page():
     """Determine which page to show based on URL parameters"""
-    invite_id = st.query_params.get("invite", None)
+invite_id = st.query_params.get("invite", None)
     admin_mode = st.query_params.get("admin", "0") in ("1", "true", "yes")
     
     if invite_id and admin_mode:
@@ -647,7 +664,7 @@ if is_admin:
         if st.button("🎯 Create Test Invitation", help="Creates a test invitation using the provided event data and local files"):
             with st.spinner("Creating test invitation..."):
                 invite_id, message = create_test_invitation()
-                if invite_id:
+if invite_id:
                     st.success(message)
                     st.session_state.test_invite_id = invite_id
                     st.rerun()
@@ -672,8 +689,8 @@ if is_admin:
         test_data = load_invitation(st.session_state.test_invite_id)
         if test_data:
             image_bytes = test_data.get("image_base64")
-            music_bytes = None
-            music_filename = None
+        music_bytes = None
+        music_filename = None
             if test_data.get("music_base64") and test_data.get("music_filename"):
                 music_bytes = base64.b64decode(test_data["music_base64"])
                 music_filename = test_data["music_filename"]
@@ -699,7 +716,7 @@ if is_admin:
                 del st.session_state.test_invite_id
                 st.rerun()
 
-    st.markdown("---")
+            st.markdown("---")
 
 def show_event_creation_page():
     """PAGE 1: Event Creation Page - Main landing page for creating invitations"""
@@ -712,8 +729,8 @@ def show_event_creation_page():
         with col1:
             event_name = st.text_input("Event Name", placeholder="e.g., Wedding Ceremony, Housewarming")
             host_names = st.text_input("Host Names", placeholder="e.g., John & Jane Smith")
-            event_date = st.date_input("Event Date", value=datetime.today())
-            event_time = st.time_input("Event Time", value=datetime.now().time())
+        event_date = st.date_input("Event Date", value=datetime.today())
+        event_time = st.time_input("Event Time", value=datetime.now().time())
             venue_address = st.text_area("Venue Address", placeholder="Full address with city, state, zip")
             
         with col2:
@@ -728,11 +745,11 @@ def show_event_creation_page():
         
         with col3:
             st.markdown("**Background Image:**")
-            image_file = st.file_uploader("Upload Background Image (deity, temple, or custom design)", type=["jpg", "png"])
+        image_file = st.file_uploader("Upload Background Image (deity, temple, or custom design)", type=["jpg", "png"])
         
         with col4:
             st.markdown("**Background Music:**")
-            music_file = st.file_uploader("Upload Music (MP3/WAV, optional)", type=["mp3", "wav"])
+        music_file = st.file_uploader("Upload Music (MP3/WAV, optional)", type=["mp3", "wav"])
             theme = st.selectbox("Theme Choice", list(THEMES.keys()), index=0)
         
         st.markdown("---")
@@ -764,46 +781,46 @@ def show_event_creation_page():
             st.error("Please enter an event name.")
         else:
             # Process uploaded files
-            image_bytes = None
-            image_base64 = None
-            if image_file:
+        image_bytes = None
+        image_base64 = None
+        if image_file:
                 try:
-                    image = Image.open(image_file)
-                    buf = BytesIO()
-                    image.save(buf, format="PNG")
-                    image_bytes = base64.b64encode(buf.getvalue()).decode("utf-8")
-                    image_base64 = image_bytes
+            image = Image.open(image_file)
+            buf = BytesIO()
+            image.save(buf, format="PNG")
+            image_bytes = base64.b64encode(buf.getvalue()).decode("utf-8")
+            image_base64 = image_bytes
                     st.success("✅ Image uploaded successfully")
                 except Exception as e:
                     st.error(f"❌ Error processing image: {str(e)}")
                     st.stop()
-            
-            music_bytes = None
-            music_base64 = None
-            music_filename = None
-            if music_file:
+
+        music_bytes = None
+        music_base64 = None
+        music_filename = None
+        if music_file:
                 try:
-                    music_bytes = music_file.read()
-                    music_base64 = base64.b64encode(music_bytes).decode("utf-8")
-                    music_filename = music_file.name
+            music_bytes = music_file.read()
+            music_base64 = base64.b64encode(music_bytes).decode("utf-8")
+            music_filename = music_file.name
                     st.success("✅ Music uploaded successfully")
                 except Exception as e:
                     st.error(f"❌ Error processing music: {str(e)}")
                     st.stop()
-            
+
             # Create event data
-            data = {
-                "event_name": event_name,
-                "host_names": host_names,
+        data = {
+            "event_name": event_name,
+            "host_names": host_names,
                 "event_date": event_date.strftime("%Y-%m-%d"),
-                "event_time": event_time.strftime("%I:%M %p"),
-                "venue_address": venue_address,
-                "invocation": invocation,
-                "invitation_message": invitation_message,
-                "theme": theme,
-                "image_base64": image_base64,
-                "music_base64": music_base64,
-                "music_filename": music_filename,
+            "event_time": event_time.strftime("%I:%M %p"),
+            "venue_address": venue_address,
+            "invocation": invocation,
+            "invitation_message": invitation_message,
+            "theme": theme,
+            "image_base64": image_base64,
+            "music_base64": music_base64,
+            "music_filename": music_filename,
                 "manager_email": manager_email,
                 "text_color": text_color,
                 "font_scale": font_scale,
@@ -814,7 +831,7 @@ def show_event_creation_page():
             
             # Save invitation and redirect to admin page
             try:
-                invite_id = save_invitation(data)
+        invite_id = save_invitation(data)
                 admin_url = f"{get_base_url()}?invite={invite_id}&admin=true"
                 public_url = f"{get_base_url()}?invite={invite_id}"
                 
@@ -864,8 +881,8 @@ def show_event_admin_page():
         if st.button("📋 Copy Link"):
             st.success("Link copied to clipboard!")
         st.markdown(f"[📱 Share via WhatsApp](https://wa.me/?text=Invitation%20Link%3A%20{public_url}) &nbsp; | &nbsp; [📧 Share via Email](mailto:?subject=Invitation&body=Invitation%20Link%3A%20{public_url})")
-    
-    st.markdown("---")
+
+        st.markdown("---")
     
     # Live preview with stored customization
     st.markdown("### 🎨 Live Preview")
@@ -1110,7 +1127,7 @@ elif current_page == "public":
 # --- Deployment Instructions (admin only) ---
 if is_admin and current_page == "creation":
     st.markdown("---")
-    st.markdown("""
+st.markdown("""
 ### Deployment Instructions
 
 1. **Push code to GitHub**
@@ -1130,11 +1147,11 @@ if is_admin and current_page == "creation":
 4. **Environment Variables (for email)**
     - Set these in Streamlit Cloud secrets:
     ```toml
-    SMTP_USER = "happenin.app25@gmail.com"
-    SMTP_PASS = "oluc qduv cszp npnk"
+    SMTP_USER = "your-email@gmail.com"
+    SMTP_PASS = "your-app-password"
     SMTP_HOST = "smtp.gmail.com"
     SMTP_PORT = "587"
     SMTP_TLS = "true"
-    RSVP_NOTIFY_EMAIL = "hemanthb.0445@gmail.com"
+    RSVP_NOTIFY_EMAIL = "your-notification-email@gmail.com"
     ```
 """)
