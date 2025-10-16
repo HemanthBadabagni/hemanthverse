@@ -75,3 +75,5 @@ if __name__ == "__main__":
     else:
         print("❌ Image test failed - check file path and permissions")
 
+
+

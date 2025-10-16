@@ -108,20 +108,20 @@ def compute_average_luminance(image_base64):
 def choose_text_color(image_base64, mode="Auto", custom_color="#000000"):
     """Choose a readable text color based on the mode and background image.
 
-    - Auto: picks dark (#111111) on light backgrounds, light (#f8f8f8) on dark.
+    - Auto: picks dark (#000000) on light backgrounds, light (#FFFFFF) on dark.
     - Dark/Light: force preset colors.
     - Custom: returns provided custom color.
     """
     if mode == "Custom":
         return custom_color or "#000000"
     if mode == "Dark":
-        return "#111111"
+        return "#000000"
     if mode == "Light":
-        return "#f8f8f8"
+        return "#FFFFFF"
     luminance = compute_average_luminance(image_base64)
     if luminance is None:
-        return "#111111"
-    return "#111111" if luminance > 0.5 else "#f8f8f8"
+        return "#000000"
+    return "#000000" if luminance > 0.5 else "#FFFFFF"
 
 def get_smtp_config():
     """Get SMTP configuration from environment variables or Streamlit secrets"""
@@ -184,6 +184,18 @@ def send_rsvp_email(invite_id, rsvp_entry):
     
     # Prefer invite's manager_email; otherwise use configured notify email
     notify_to = invite_data.get("manager_email") or smtp_config['notify_email']
+    
+    # Debug logging to help identify the source of invalid emails
+    logger.info(f"RSVP email recipient: {notify_to}")
+    logger.info(f"Manager email from invite: {invite_data.get('manager_email')}")
+    logger.info(f"Notify email from config: {smtp_config['notify_email']}")
+    
+    # Validate email address format
+    import re
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if notify_to and not re.match(email_pattern, notify_to):
+        logger.warning(f"Invalid email address format: {notify_to}")
+        return False, f"Invalid email address: {notify_to}"
     
     if not (smtp_config['user'] and smtp_config['password'] and notify_to):
         logger.info("RSVP email not sent: SMTP settings not fully configured.")
@@ -373,9 +385,8 @@ def validate_event_data(data):
             missing_fields.append(field)
     
     if missing_fields:
-        return False, f"Missing required fields: {', '.join(missing_fields)}"
-    
-    return True, "Valid"
+        return False
+    return True
 
 def create_test_invitation():
     """Create a test invitation with the provided event data"""
@@ -400,10 +411,10 @@ def create_test_invitation():
         }
         
         # Validate the data
-        is_valid, message = validate_event_data(test_data)
+        is_valid = validate_event_data(test_data)
         if not is_valid:
-            logger.error(f"Test data validation failed: {message}")
-            return None, message
+            logger.error(f"Test data validation failed")
+            return None, "Test data validation failed"
         
         # Save the invitation
         invite_id = save_invitation(test_data)
@@ -451,7 +462,7 @@ def load_rsvps(invite_id):
         return []
 
 def export_rsvps_csv(invite_id):
-    """Return RSVPs as CSV bytes."""
+    """Return RSVPs as CSV string."""
     import csv
     from io import StringIO
     rows = load_rsvps(invite_id)
@@ -478,7 +489,7 @@ def export_rsvps_csv(invite_id):
             "message": row.get("message",""),
             "timestamp": row.get("timestamp",""),
         })
-    return output.getvalue().encode("utf-8")
+    return output.getvalue()
 
 def clear_rsvps(invite_id):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
@@ -490,10 +501,13 @@ def get_rsvp_analytics(invite_id):
     rsvps = load_rsvps(invite_id)
     if not rsvps:
         return {
-            "total": 0,
-            "yes": 0,
-            "no": 0,
-            "maybe": 0,
+            "total_responses": 0,
+            "yes_count": 0,
+            "no_count": 0,
+            "maybe_count": 0,
+            "total_adults": 0,
+            "total_children": 0,
+            "total_guests": 0,
             "yes_list": [],
             "no_list": [],
             "maybe_list": []
@@ -504,9 +518,9 @@ def get_rsvp_analytics(invite_id):
     maybe_list = []
     
     for rsvp in rsvps:
-        if rsvp["response"] == "Yes":
+        if rsvp["response"].lower() == "yes":
             yes_list.append(rsvp)
-        elif rsvp["response"] == "No":
+        elif rsvp["response"].lower() == "no":
             no_list.append(rsvp)
         else:
             maybe_list.append(rsvp)
@@ -517,13 +531,13 @@ def get_rsvp_analytics(invite_id):
     total_guests = total_adults + total_kids
 
     return {
-        "total": len(rsvps),
-        "yes": len(yes_list),
-        "no": len(no_list),
-        "maybe": len(maybe_list),
-        "attending_adults": total_adults,
-        "attending_kids": total_kids,
-        "attending_total": total_guests,
+        "total_responses": len(rsvps),
+        "yes_count": len(yes_list),
+        "no_count": len(no_list),
+        "maybe_count": len(maybe_list),
+        "total_adults": total_adults,
+        "total_children": total_kids,
+        "total_guests": total_guests,
         "yes_list": yes_list,
         "no_list": no_list,
         "maybe_list": maybe_list
@@ -626,7 +640,7 @@ st.markdown(
 # --- Page Navigation ---
 def get_page():
     """Determine which page to show based on URL parameters"""
-invite_id = st.query_params.get("invite", None)
+    invite_id = st.query_params.get("invite", None)
     admin_mode = st.query_params.get("admin", "0") in ("1", "true", "yes")
     
     if invite_id and admin_mode:
@@ -664,7 +678,7 @@ if is_admin:
         if st.button("🎯 Create Test Invitation", help="Creates a test invitation using the provided event data and local files"):
             with st.spinner("Creating test invitation..."):
                 invite_id, message = create_test_invitation()
-if invite_id:
+                if invite_id:
                     st.success(message)
                     st.session_state.test_invite_id = invite_id
                     st.rerun()
@@ -689,8 +703,8 @@ if invite_id:
         test_data = load_invitation(st.session_state.test_invite_id)
         if test_data:
             image_bytes = test_data.get("image_base64")
-        music_bytes = None
-        music_filename = None
+            music_bytes = None
+            music_filename = None
             if test_data.get("music_base64") and test_data.get("music_filename"):
                 music_bytes = base64.b64decode(test_data["music_base64"])
                 music_filename = test_data["music_filename"]
@@ -729,8 +743,8 @@ def show_event_creation_page():
         with col1:
             event_name = st.text_input("Event Name", placeholder="e.g., Wedding Ceremony, Housewarming")
             host_names = st.text_input("Host Names", placeholder="e.g., John & Jane Smith")
-        event_date = st.date_input("Event Date", value=datetime.today())
-        event_time = st.time_input("Event Time", value=datetime.now().time())
+            event_date = st.date_input("Event Date", value=datetime.today())
+            event_time = st.time_input("Event Time", value=datetime.now().time())
             venue_address = st.text_area("Venue Address", placeholder="Full address with city, state, zip")
             
         with col2:
@@ -745,82 +759,215 @@ def show_event_creation_page():
         
         with col3:
             st.markdown("**Background Image:**")
-        image_file = st.file_uploader("Upload Background Image (deity, temple, or custom design)", type=["jpg", "png"])
+            image_file = st.file_uploader("Upload Background Image (deity, temple, or custom design)", type=["jpg", "png"])
         
         with col4:
             st.markdown("**Background Music:**")
-        music_file = st.file_uploader("Upload Music (MP3/WAV, optional)", type=["mp3", "wav"])
+            music_file = st.file_uploader("Upload Music (MP3/WAV, optional)", type=["mp3", "wav"])
             theme = st.selectbox("Theme Choice", list(THEMES.keys()), index=0)
         
-        st.markdown("---")
-        st.markdown("### 🎨 Visual Customization")
-        
-        # Font and background customization controls
-        col5, col6, col7 = st.columns(3)
-        
-        with col5:
-            st.markdown("**Text Appearance:**")
-            text_color = st.color_picker("Font Color", value="#000000", help="Choose the color for all text on the invitation")
-            font_scale = st.slider("Font Size", min_value=0.7, max_value=1.5, value=1.0, step=0.1, help="Adjust the size of all text")
-        
-        with col6:
-            st.markdown("**Background Overlay:**")
-            overlay_opacity = st.slider("Background Darkness", min_value=0.0, max_value=0.7, value=0.15, step=0.05, help="Add a dark overlay to improve text readability")
-            title_offset = st.slider("Title Position", min_value=-100, max_value=100, value=-20, step=5, help="Adjust vertical position of the event title")
-        
-        with col7:
-            st.markdown("**Preview Controls:**")
-            show_preview = st.checkbox("Show Live Preview", value=True, help="Display a preview of your invitation as you customize")
-            if show_preview:
-                st.info("💡 Preview will appear below after you upload an image")
-        
         submit_button = st.form_submit_button("🎨 Create Invitation", use_container_width=True)
+        
+        # Store form values in session state for preview access
+        if event_name:
+            st.session_state.preview_event_name = event_name
+        if host_names:
+            st.session_state.preview_host_names = host_names
+        if event_date:
+            st.session_state.preview_event_date = event_date.strftime("%Y-%m-%d")
+        if event_time:
+            st.session_state.preview_event_time = event_time.strftime("%I:%M %p")
+        if venue_address:
+            st.session_state.preview_venue_address = venue_address
+        if invocation:
+            st.session_state.preview_invocation = invocation
+        if invitation_message:
+            st.session_state.preview_invitation_message = invitation_message
+        if theme:
+            st.session_state.preview_theme = theme
+        if image_file:
+            st.session_state.preview_image_file = image_file
+    
+    # Visual Customization Section (after form, before reset button)
+    st.markdown("---")
+    st.markdown("### 🎨 Visual Customization")
+    show_preview = st.checkbox("Show Live Preview", value=True, help="Display a preview of your invitation as you customize")
+    if show_preview:
+        st.info("💡 Preview will appear below")
+    
+    # Customization controls (outside the form so they update in real-time)
+    col_custom1, col_custom2, col_custom3 = st.columns(3)
+    
+    with col_custom1:
+        st.markdown("**Text Styling:**")
+        text_color = st.color_picker("Font Color", value="#000000", help="Choose the color for all text on the invitation")
+        font_scale = st.slider("Font Size", min_value=0.7, max_value=1.5, value=1.0, step=0.1, help="Adjust the size of all text")
+        
+        # Store in session state for preview access
+        st.session_state.preview_text_color = text_color
+        st.session_state.preview_font_scale = font_scale
+    
+    with col_custom2:
+        st.markdown("**Background Overlay:**")
+        overlay_opacity = st.slider("Background Darkness", min_value=0.0, max_value=0.7, value=0.15, step=0.05, help="Add a dark overlay to improve text readability")
+        title_offset = st.slider("Title Position", min_value=-100, max_value=100, value=-20, step=5, help="Adjust vertical position of the event title")
+        
+        # Store in session state for preview access
+        st.session_state.preview_overlay_opacity = overlay_opacity
+        st.session_state.preview_title_offset = title_offset
+    
+    with col_custom3:
+        st.markdown("**Customization Tips:**")
+        with st.expander("🎨 Tips for Better Results"):
+            st.markdown("""
+            **Font Color**: Choose colors that contrast well with your background image
+            
+            **Font Size**: Larger text is more readable, especially for mobile devices
+            
+            **Background Darkness**: Add overlay to make text more readable on bright images
+            
+            **Title Position**: Adjust if your image has important elements at the top
+            """)
+    
+    # Reset button for customization (outside the form)
+    col_reset1, col_reset2, col_reset3 = st.columns([1, 1, 1])
+    with col_reset2:
+        if st.button("🔄 Reset to Defaults", help="Reset all customization settings to default values", use_container_width=True):
+            # Clear customization session state
+            if 'preview_text_color' in st.session_state:
+                del st.session_state.preview_text_color
+            if 'preview_font_scale' in st.session_state:
+                del st.session_state.preview_font_scale
+            if 'preview_overlay_opacity' in st.session_state:
+                del st.session_state.preview_overlay_opacity
+            if 'preview_title_offset' in st.session_state:
+                del st.session_state.preview_title_offset
+            st.rerun()
+    
+    # Live Preview Section (outside the form so it updates in real-time)
+    # Use session state to access form values outside the form
+    has_content = False
+    preview_data = {}
+    
+    # Check if we have any content to preview
+    if 'preview_event_name' in st.session_state and st.session_state.preview_event_name.strip():
+        has_content = True
+    elif 'preview_image_file' in st.session_state and st.session_state.preview_image_file is not None:
+        has_content = True
+    
+    if show_preview and has_content:
+        st.markdown("---")
+        st.markdown("### 👀 Live Preview")
+        
+        # Create preview data from session state
+        preview_data = {
+            "event_name": st.session_state.get('preview_event_name', 'Your Event Name'),
+            "host_names": st.session_state.get('preview_host_names', 'Your Host Names'),
+            "event_date": st.session_state.get('preview_event_date', '2025-01-01'),
+            "event_time": st.session_state.get('preview_event_time', '4:00 PM'),
+            "venue_address": st.session_state.get('preview_venue_address', 'Your Venue Address'),
+            "invocation": st.session_state.get('preview_invocation', 'ॐ श्री गणेशाय नमः'),
+            "invitation_message": st.session_state.get('preview_invitation_message', 'Your heartfelt message to guests...'),
+            "theme": st.session_state.get('preview_theme', 'classic')
+        }
+        
+        # Process image for preview
+        preview_image_bytes = None
+        if 'preview_image_file' in st.session_state and st.session_state.preview_image_file is not None:
+            try:
+                image = Image.open(st.session_state.preview_image_file)
+                buf = BytesIO()
+                image.save(buf, format="PNG")
+                preview_image_bytes = base64.b64encode(buf.getvalue()).decode("utf-8")
+            except Exception as e:
+                st.warning(f"⚠️ Could not process image for preview: {e}")
+        
+        # If no image uploaded, use a default or show message
+        if not preview_image_bytes:
+            st.info("📷 Upload an image above to see the preview with your customizations")
+            # Create a simple preview with just text
+            st.markdown("**Preview (text only - upload image for full preview):**")
+            st.markdown(f"**Event:** {preview_data['event_name']}")
+            st.markdown(f"**Hosted by:** {preview_data['host_names']}")
+            st.markdown(f"**Date:** {preview_data['event_date']} at {preview_data['event_time']}")
+            st.markdown(f"**Venue:** {preview_data['venue_address']}")
+            if preview_data['invocation']:
+                st.markdown(f"**Invocation:** {preview_data['invocation']}")
+            st.markdown(f"**Message:** {preview_data['invitation_message']}")
+        else:
+            # Show full preview with image and customizations
+            st.info("🎨 Adjust the customization controls above to see changes in real-time")
+            
+            # Add preview tips
+            with st.expander("💡 Preview Tips", expanded=False):
+                st.markdown("""
+                **Customization Tips:**
+                - **Font Color**: Choose colors that contrast well with your background
+                - **Font Size**: Larger fonts are more readable on mobile devices
+                - **Background Darkness**: Add overlay for better text readability on bright images
+                - **Title Position**: Adjust if text overlaps with important parts of your image
+                
+                **Best Practices:**
+                - Test on both desktop and mobile views
+                - Ensure text is readable against your background
+                - Keep font sizes large enough for older guests
+                - Use the reset button to start over if needed
+                """)
+            
+            display_invitation_card(
+                preview_data, 
+                image_bytes=preview_image_bytes,
+                text_color=st.session_state.get('preview_text_color', '#000000'),
+                font_scale=st.session_state.get('preview_font_scale', 1.0),
+                overlay_opacity=st.session_state.get('preview_overlay_opacity', 0.15),
+                title_offset_px=st.session_state.get('preview_title_offset', -20)
+            )
     
     if submit_button:
         if not event_name.strip():
             st.error("Please enter an event name.")
         else:
             # Process uploaded files
-        image_bytes = None
-        image_base64 = None
-        if image_file:
+            image_bytes = None
+            image_base64 = None
+            if image_file:
                 try:
-            image = Image.open(image_file)
-            buf = BytesIO()
-            image.save(buf, format="PNG")
-            image_bytes = base64.b64encode(buf.getvalue()).decode("utf-8")
-            image_base64 = image_bytes
+                    image = Image.open(image_file)
+                    buf = BytesIO()
+                    image.save(buf, format="PNG")
+                    image_bytes = base64.b64encode(buf.getvalue()).decode("utf-8")
+                    image_base64 = image_bytes
                     st.success("✅ Image uploaded successfully")
                 except Exception as e:
                     st.error(f"❌ Error processing image: {str(e)}")
                     st.stop()
 
-        music_bytes = None
-        music_base64 = None
-        music_filename = None
-        if music_file:
+            music_bytes = None
+            music_base64 = None
+            music_filename = None
+            if music_file:
                 try:
-            music_bytes = music_file.read()
-            music_base64 = base64.b64encode(music_bytes).decode("utf-8")
-            music_filename = music_file.name
+                    music_bytes = music_file.read()
+                    music_base64 = base64.b64encode(music_bytes).decode("utf-8")
+                    music_filename = music_file.name
                     st.success("✅ Music uploaded successfully")
                 except Exception as e:
                     st.error(f"❌ Error processing music: {str(e)}")
                     st.stop()
 
             # Create event data
-        data = {
-            "event_name": event_name,
-            "host_names": host_names,
+            data = {
+                "event_name": event_name,
+                "host_names": host_names,
                 "event_date": event_date.strftime("%Y-%m-%d"),
-            "event_time": event_time.strftime("%I:%M %p"),
-            "venue_address": venue_address,
-            "invocation": invocation,
-            "invitation_message": invitation_message,
-            "theme": theme,
-            "image_base64": image_base64,
-            "music_base64": music_base64,
-            "music_filename": music_filename,
+                "event_time": event_time.strftime("%I:%M %p"),
+                "venue_address": venue_address,
+                "invocation": invocation,
+                "invitation_message": invitation_message,
+                "theme": theme,
+                "image_base64": image_base64,
+                "music_base64": music_base64,
+                "music_filename": music_filename,
                 "manager_email": manager_email,
                 "text_color": text_color,
                 "font_scale": font_scale,
@@ -831,7 +978,7 @@ def show_event_creation_page():
             
             # Save invitation and redirect to admin page
             try:
-        invite_id = save_invitation(data)
+                invite_id = save_invitation(data)
                 admin_url = f"{get_base_url()}?invite={invite_id}&admin=true"
                 public_url = f"{get_base_url()}?invite={invite_id}"
                 
