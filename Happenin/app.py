@@ -738,7 +738,7 @@ def show_event_creation_page():
             event_name = st.text_input("Event Name", placeholder="e.g., Wedding Ceremony, Housewarming")
             host_names = st.text_input("Host Names", placeholder="e.g., John & Jane Smith")
             event_date = st.date_input("Event Date", value=datetime.today())
-            event_time = st.time_input("Event Time", value=datetime.now().time())
+            event_time = st.text_input("Event Time", placeholder="e.g., 4:00 PM, 2:30 PM, 6:00 PM", help="Enter time in any format you prefer (e.g., 4:00 PM, 2:30 PM, 6:00 PM)")
             venue_address = st.text_area("Venue Address", placeholder="Full address with city, state, zip")
             
         with col2:
@@ -770,7 +770,7 @@ def show_event_creation_page():
         if event_date:
             st.session_state.preview_event_date = event_date.strftime("%Y-%m-%d")
         if event_time:
-            st.session_state.preview_event_time = event_time.strftime("%I:%M %p")
+            st.session_state.preview_event_time = event_time
         if venue_address:
             st.session_state.preview_venue_address = venue_address
         if invocation:
@@ -954,7 +954,7 @@ def show_event_creation_page():
                 "event_name": event_name,
                 "host_names": host_names,
                 "event_date": event_date.strftime("%Y-%m-%d"),
-                "event_time": event_time.strftime("%I:%M %p"),
+                "event_time": event_time,
                 "venue_address": venue_address,
                 "invocation": invocation,
                 "invitation_message": invitation_message,
