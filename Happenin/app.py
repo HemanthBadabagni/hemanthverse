@@ -199,11 +199,15 @@ def send_rsvp_email(invite_id, rsvp_entry):
         logger.info("RSVP email not sent: SMTP settings not fully configured.")
         return False, "SMTP not configured"
     
+    if not smtp_config['host'] or not smtp_config['port']:
+        logger.info("RSVP email not sent: SMTP configuration incomplete.")
+        return False, "SMTP configuration incomplete - missing host or port"
+    
     smtp_user = smtp_config['user']
     smtp_pass = smtp_config['password']
     host = smtp_config['host']
     port = int(smtp_config['port'])
-    use_tls = smtp_config['tls'].lower() != "false"
+    use_tls = smtp_config['tls'].lower() != "false" if smtp_config['tls'] else True
     try:
         data = invite_data
         event_name = data.get("event_name", "Your Event")
@@ -303,11 +307,14 @@ def send_test_email(to_address: str):
     if not (smtp_config['user'] and smtp_config['password'] and to_address):
         return False, "Missing SMTP_USER/SMTP_PASS or recipient"
     
+    if not smtp_config['host'] or not smtp_config['port']:
+        return False, "SMTP configuration incomplete - missing host or port"
+    
     smtp_user = smtp_config['user']
     smtp_pass = smtp_config['password']
     host = smtp_config['host']
     port = int(smtp_config['port'])
-    use_tls = smtp_config['tls'].lower() != "false"
+    use_tls = smtp_config['tls'].lower() != "false" if smtp_config['tls'] else True
     try:
         msg = EmailMessage()
         msg["From"] = smtp_user
