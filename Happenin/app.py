@@ -1056,17 +1056,17 @@ def show_event_admin_page():
     
     analytics = get_rsvp_analytics(invite_id)
     
-    if analytics["total"] > 0:
+    if analytics["total_responses"] > 0:
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.metric("Total Responses", analytics["total"])
+            st.metric("Total Responses", analytics["total_responses"])
         with col2:
-            st.metric("✅ Yes", analytics["yes"], delta=f"{analytics['yes']/analytics['total']*100:.1f}%")
+            st.metric("✅ Yes", analytics["yes_count"], delta=f"{analytics['yes_count']/analytics['total_responses']*100:.1f}%")
         with col3:
-            st.metric("❌ No", analytics["no"], delta=f"{analytics['no']/analytics['total']*100:.1f}%")
+            st.metric("❌ No", analytics["no_count"], delta=f"{analytics['no_count']/analytics['total_responses']*100:.1f}%")
         with col4:
-            st.metric("❓ Maybe", analytics["maybe"], delta=f"{analytics['maybe']/analytics['total']*100:.1f}%")
+            st.metric("❓ Maybe", analytics["maybe_count"], delta=f"{analytics['maybe_count']/analytics['total_responses']*100:.1f}%")
         
         # Detailed RSVP lists
         tab1, tab2, tab3 = st.tabs(["✅ Attending", "❌ Not Attending", "❓ Maybe"])
