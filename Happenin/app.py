@@ -1079,6 +1079,7 @@ def show_event_admin_page():
     analytics = get_rsvp_analytics(invite_id)
     
     if analytics["total_responses"] > 0:
+        # First row: Response counts
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
@@ -1089,6 +1090,18 @@ def show_event_admin_page():
             st.metric("❌ No", analytics["no_count"], delta=f"{analytics['no_count']/analytics['total_responses']*100:.1f}%")
         with col4:
             st.metric("❓ Maybe", analytics["maybe_count"], delta=f"{analytics['maybe_count']/analytics['total_responses']*100:.1f}%")
+        
+        # Second row: Guest counts (only for "Yes" responses)
+        if analytics["yes_count"] > 0:
+            st.markdown("#### 👥 Guest Counts (Attending Only)")
+            guest_col1, guest_col2, guest_col3 = st.columns(3)
+            
+            with guest_col1:
+                st.metric("👨‍👩‍👧‍👦 Total Adults", analytics["total_adults"])
+            with guest_col2:
+                st.metric("👶 Total Children", analytics["total_children"])
+            with guest_col3:
+                st.metric("🎉 Total Guests", analytics["total_guests"])
         
         # Detailed RSVP lists
         tab1, tab2, tab3 = st.tabs(["✅ Attending", "❌ Not Attending", "❓ Maybe"])
