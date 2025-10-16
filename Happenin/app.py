@@ -690,12 +690,6 @@ if is_admin:
             st.session_state.load_test_data = True
             st.rerun()
 
-    # SMTP test
-    st.markdown("#### ✉️ Email Test")
-    test_email = st.text_input("Send a test email to", value=os.getenv("RSVP_NOTIFY_EMAIL", ""))
-    if st.button("Send Test Email"):
-        ok, msg = send_test_email(test_email)
-        (st.success if ok else st.error)(msg)
 
     # Show test invitation if created
     if hasattr(st.session_state, 'test_invite_id') and st.session_state.test_invite_id:
