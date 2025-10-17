@@ -732,25 +732,61 @@ def display_invitation_card(data, image_bytes=None, text_color="#000000", font_s
     
     # Enhanced HTML with better responsive design and text visibility
     html_content = f"""
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
+            * {{
+                box-sizing: border-box;
+            }}
+            .invitation-container {{
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 auto !important;
+                padding: 1em 0.5em !important;
+            }}
             @media (max-width: 768px) {{
                 .invitation-container {{
-                    padding: 1em 0.5em !important;
+                    padding: 0.8em 0.3em !important;
+                    margin: 0 !important;
                 }}
                 .invitation-text {{
-                    font-size: {1.8*font_scale:.2f}em !important;
+                    font-size: {1.6*font_scale:.2f}em !important;
+                    line-height: 1.2 !important;
                 }}
                 .invitation-subtitle {{
-                    font-size: {1.1*font_scale:.2f}em !important;
+                    font-size: {1.0*font_scale:.2f}em !important;
+                    line-height: 1.3 !important;
                 }}
                 .invitation-details {{
-                    font-size: {1.0*font_scale:.2f}em !important;
+                    font-size: {0.9*font_scale:.2f}em !important;
+                    line-height: 1.3 !important;
                 }}
                 .invitation-venue {{
-                    font-size: {0.9*font_scale:.2f}em !important;
+                    font-size: {0.8*font_scale:.2f}em !important;
+                    line-height: 1.3 !important;
                 }}
                 .invitation-message {{
-                    font-size: {1.0*font_scale:.2f}em !important;
+                    font-size: {0.9*font_scale:.2f}em !important;
+                    line-height: 1.4 !important;
+                }}
+            }}
+            @media (max-width: 480px) {{
+                .invitation-container {{
+                    padding: 0.5em 0.2em !important;
+                }}
+                .invitation-text {{
+                    font-size: {1.4*font_scale:.2f}em !important;
+                }}
+                .invitation-subtitle {{
+                    font-size: {0.9*font_scale:.2f}em !important;
+                }}
+                .invitation-details {{
+                    font-size: {0.8*font_scale:.2f}em !important;
+                }}
+                .invitation-venue {{
+                    font-size: {0.7*font_scale:.2f}em !important;
+                }}
+                .invitation-message {{
+                    font-size: {0.8*font_scale:.2f}em !important;
                 }}
             }}
         </style>
@@ -773,9 +809,8 @@ def display_invitation_card(data, image_bytes=None, text_color="#000000", font_s
         </div>
     """
     
-    # Use st.components.v1.html for proper HTML rendering with responsive height
-    import streamlit.components.v1 as components
-    components.html(html_content, height=800)
+    # Use st.markdown for better mobile responsiveness (no iframe constraints)
+    st.markdown(html_content, unsafe_allow_html=True)
 
 # --- Header ---
 st.markdown(
