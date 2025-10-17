@@ -1391,7 +1391,6 @@ def show_public_invite_page():
         audio_b64 = base64.b64encode(music_bytes).decode('utf-8')
         
         # Debug info for troubleshooting
-        st.info(f"🎵 Music Debug: File size: {len(music_bytes)} bytes, MIME: {mime}, Base64 length: {len(audio_b64)}")
         
         # Option 2: Start muted, then unmute on first click (100% reliable)
         music_html = f"""
@@ -1444,7 +1443,6 @@ def show_public_invite_page():
             mime = 'audio/mpeg'
             audio_b64 = base64.b64encode(local_music_bytes).decode('utf-8')
             
-            st.info(f"🎵 Local Music Debug: File size: {len(local_music_bytes)} bytes, MIME: {mime}, Base64 length: {len(audio_b64)}")
             
             music_html = f"""
             <div style="display:none;">
