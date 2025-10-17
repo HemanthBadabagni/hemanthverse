@@ -18,17 +18,22 @@ Create • Share • Celebrate
 - **Traditional Themes**: Temple, Wedding, Festival themes
 - **Background Music**: Auto-play music for enhanced experience
 
-### 📧 **Email Notifications**
+### 📧 **Email Notifications & Reminders**
 - **HTML Email Templates**: Professional, clean design
 - **Real-time Notifications**: Instant RSVP alerts to event managers
+- **Custom Reminders**: Send personalized messages to "Yes" respondents
+- **Individual Emails**: Privacy-focused, no group emails
+- **Fault-tolerant**: Continues sending even if some emails fail
 - **Test Email Function**: Verify email functionality
 - **SMTP Configuration**: Works on all deployment platforms
 
 ### 📊 **RSVP Management**
 - **Live Analytics**: Real-time RSVP counts and statistics
 - **Guest Details**: Name, email, attendance, guest counts
+- **Email Collection**: Mandatory email for reminder functionality
 - **Persistent Data**: Links work forever, data never lost
 - **Export Options**: CSV download for guest lists
+- **Reminder System**: Send custom messages to confirmed attendees
 
 ### 🌐 **3-Page Architecture**
 - **Page 1**: Event Creation - Design your invitation
@@ -128,6 +133,7 @@ Create • Share • Celebrate
 ### **3. Manage RSVPs**
 - Use the admin dashboard to view analytics
 - See real-time RSVP counts
+- Send custom reminders to confirmed attendees
 - Export guest lists to CSV
 - Test email notifications
 
@@ -141,9 +147,12 @@ Create • Share • Celebrate
    - Use this password (not your regular password)
 
 ### **Email Features**
-- **Subject Format**: `Event Name - Guest Name - Yes/No`
+- **RSVP Notifications**: `Event Name - Guest Name - Yes/No`
+- **Custom Reminders**: Send personalized messages to confirmed attendees
 - **HTML Templates**: Professional, responsive design
+- **Individual Delivery**: Privacy-focused, no group emails
 - **Real-time Delivery**: Instant notifications to event manager email
+- **Fault-tolerant**: Continues sending even if some emails fail
 - **Test Functions**: Verify email functionality
 - **Graceful Handling**: App works without SMTP configuration
 
@@ -153,7 +162,8 @@ Create • Share • Celebrate
 - **Streamlit**: Web application framework
 - **Python**: Backend logic
 - **HTML/CSS**: Custom styling and templates
-- **SMTP**: Email notifications
+- **JavaScript**: Music playback and interactive features
+- **SMTP**: Email notifications and reminders
 - **JSON**: Data persistence
 - **UUID**: Unique invitation IDs
 
@@ -162,6 +172,14 @@ Create • Share • Celebrate
 - **Persistent Links**: Invitation URLs work forever
 - **Real-time Updates**: RSVP counts update immediately
 - **Historical Data**: All RSVPs saved with timestamps
+
+### **Music System**
+- **Auto-play Support**: Background music starts automatically
+- **Browser Compatibility**: Works across all modern browsers
+- **Multiple Formats**: Supports MP3, WAV, M4A, OGG, FLAC, AAC
+- **Dynamic Detection**: Automatically finds music files in project directory
+- **User Interaction**: Music starts on first user click (browser policy compliance)
+- **Seamless Experience**: No visible controls, pure background audio
 
 ### **Deployment Platforms**
 - ✅ **Streamlit Cloud** (Recommended)
@@ -180,9 +198,11 @@ python test_invitations.py
 Tests include:
 - Invitation creation and storage
 - RSVP functionality
-- Email sending
+- Email sending and reminders
+- Music file detection and playback
 - Data persistence
 - File handling
+- SMTP configuration validation
 
 ## 📊 Features Overview
 
@@ -190,6 +210,7 @@ Tests include:
 |---------|--------|-------------|
 | 🎨 Custom Invitations | ✅ | Beautiful, customizable designs |
 | 📧 Email Notifications | ✅ | HTML emails with real-time delivery |
+| 📧 Custom Reminders | ✅ | Send personalized messages to confirmed attendees |
 | 📊 RSVP Analytics | ✅ | Live counts and detailed statistics |
 | 💾 Data Persistence | ✅ | Links work forever, data never lost |
 | 🌐 Multi-page UI | ✅ | Clean 3-page architecture |
