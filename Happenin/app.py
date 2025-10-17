@@ -1514,7 +1514,7 @@ def show_public_invite_page():
         
         with col1:
             guest_name = st.text_input("Your Name *", placeholder="Enter your full name")
-            guest_email = st.text_input("Email Address *", placeholder="your.email@example.com", help="Required for event updates and reminders")
+            guest_email = st.text_input("Email for Reminders *", placeholder="your.email@example.com", help="Required to send you event reminders and updates")
         
         with col2:
             attendance = st.radio("Will you attend? *", ["Yes", "No", "Maybe"], horizontal=True)
