@@ -570,8 +570,8 @@ def get_base_url():
     
     # Check if running on Streamlit Cloud
     if os.getenv("STREAMLIT_CLOUD"):
-    # Use the actual deployed Streamlit Cloud URL
-    return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
+        # Use the actual deployed Streamlit Cloud URL
+        return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
     else:
         # Running locally - use localhost
         return "http://localhost:8501"
@@ -1462,8 +1462,8 @@ def show_public_invite_page():
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
             if not re.match(email_pattern, guest_email.strip()):
                 st.error("Please enter a valid email address.")
-        else:
-            rsvp_entry = {
+            else:
+                rsvp_entry = {
                 "name": guest_name,
                 "email": guest_email,
                 "response": attendance,
