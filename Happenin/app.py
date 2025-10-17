@@ -298,7 +298,122 @@ RSVP received on {rsvp_entry['timestamp'][:19].replace('T', ' at ')}
         logger.warning(f"Failed to send RSVP email: {e}")
         return False, str(e)
 
-def send_test_email(to_address: str):
+def send_reminder_email(invite_id, subject, message):
+    """Send reminder email to all guests who responded 'Yes'"""
+    invite_data = load_invitation(invite_id) or {}
+    rsvps = load_rsvps(invite_id)
+    
+    # Get SMTP configuration
+    smtp_config = get_smtp_config()
+    
+    if not (smtp_config['user'] and smtp_config['password']):
+        return False, "SMTP not configured"
+    
+    if not smtp_config['host'] or not smtp_config['port']:
+        return False, "SMTP configuration incomplete"
+    
+    # Filter only "Yes" responses with valid emails
+    yes_guests = []
+    for rsvp in rsvps:
+        if (rsvp.get("response", "").lower() == "yes" and 
+            rsvp.get("email") and 
+            rsvp["email"].strip()):
+            yes_guests.append(rsvp)
+    
+    if not yes_guests:
+        return False, "No guests with 'Yes' responses found"
+    
+    smtp_user = smtp_config['user']
+    smtp_pass = smtp_config['password']
+    host = smtp_config['host']
+    port = int(smtp_config['port'])
+    use_tls = smtp_config['tls'].lower() != "false" if smtp_config['tls'] else True
+    
+    successful_sends = 0
+    failed_sends = []
+    
+    try:
+        for guest in yes_guests:
+            try:
+                # Create HTML email content
+                html_body = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px;">
+                    <div style="max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <div style="background: #a80000; color: #fff; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+                            <h2 style="margin: 0; font-size: 24px;">📧 Event Reminder</h2>
+                        </div>
+                        
+                        <div style="padding: 30px;">
+                            <p style="font-size: 16px; margin-bottom: 20px;">Dear <strong>{guest['name']}</strong>,</p>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
+                                <h3 style="margin: 0 0 15px 0; color: #a80000; font-size: 18px;">Event Details</h3>
+                                <p style="margin: 5px 0;"><strong>Event:</strong> {invite_data.get('event_name', 'Your Event')}</p>
+                                <p style="margin: 5px 0;"><strong>Date:</strong> {invite_data.get('event_date', '')} at {invite_data.get('event_time', '')}</p>
+                                <p style="margin: 5px 0;"><strong>Venue:</strong> {invite_data.get('venue_address', '')}</p>
+                            </div>
+                            
+                            <div style="background: #e9ecef; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                                <h4 style="margin: 0 0 10px 0; color: #a80000;">Message from Host:</h4>
+                                <p style="margin: 0; white-space: pre-line;">{message}</p>
+                            </div>
+                            
+                            <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+                                We look forward to seeing you at the event!
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                # Plain text version
+                text_body = f"""
+Event Reminder
+
+Dear {guest['name']},
+
+Event Details:
+Event: {invite_data.get('event_name', 'Your Event')}
+Date: {invite_data.get('event_date', '')} at {invite_data.get('event_time', '')}
+Venue: {invite_data.get('venue_address', '')}
+
+Message from Host:
+{message}
+
+We look forward to seeing you at the event!
+                """
+                
+                msg = EmailMessage()
+                msg["From"] = smtp_user
+                msg["To"] = guest["email"]
+                msg["Subject"] = subject
+                msg.set_content(text_body)
+                msg.add_alternative(html_body, subtype="html")
+                
+                with smtplib.SMTP(host, port, timeout=15) as server:
+                    if use_tls:
+                        server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+                
+                successful_sends += 1
+                
+            except Exception as e:
+                failed_sends.append(f"{guest['name']} ({guest['email']}): {str(e)}")
+        
+        if successful_sends > 0:
+            result_msg = f"Successfully sent to {successful_sends} guests"
+            if failed_sends:
+                result_msg += f". Failed: {len(failed_sends)}"
+            return True, result_msg
+        else:
+            return False, f"Failed to send to all guests: {'; '.join(failed_sends)}"
+            
+    except Exception as e:
+        return False, f"SMTP error: {str(e)}"
+
     """Send a test email using current SMTP configuration.
 
     Returns (ok, message)
@@ -453,8 +568,13 @@ def get_base_url():
     if manual_url:
         return manual_url
     
+    # Check if running on Streamlit Cloud
+    if os.getenv("STREAMLIT_CLOUD"):
     # Use the actual deployed Streamlit Cloud URL
     return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
+    else:
+        # Running locally - use localhost
+        return "http://localhost:8501"
 
 def save_rsvp(invite_id, rsvp_entry):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
@@ -1147,9 +1267,63 @@ def show_event_admin_page():
     else:
         st.info("📊 No RSVPs yet. Share the invitation link to start receiving responses!")
     
+    # Email Management Section
+    st.markdown("---")
+    st.markdown("### 📧 Email Management")
+    
+    # Show email list for Yes responses
+    yes_guests = [rsvp for rsvp in analytics["yes_list"] if rsvp.get("email")]
+    
+    if yes_guests:
+        st.markdown(f"#### 📋 Guest Email List ({len(yes_guests)} attending guests with emails)")
+        
+        # Display emails in a nice format
+        email_list = []
+        for guest in yes_guests:
+            email_list.append(f"**{guest['name']}** - {guest['email']}")
+        
+        st.markdown("\n".join(email_list))
+        
+        # Reminder functionality
+        st.markdown("#### 📤 Send Reminder")
+        st.info("Send custom messages to all guests who responded 'Yes'")
+        
+        with st.form("reminder_form"):
+            reminder_subject = st.text_input("Email Subject", value=f"Reminder: {data['event_name']}", placeholder="Enter email subject")
+            reminder_message = st.text_area("Message to Guests", placeholder="Enter your custom message here...", height=100)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                send_reminder = st.form_submit_button("📤 Send Reminder", use_container_width=True)
+            with col2:
+                preview_reminder = st.form_submit_button("👀 Preview Email", use_container_width=True)
+        
+        if send_reminder:
+            if reminder_subject and reminder_message:
+                with st.spinner("Sending reminder emails..."):
+                    sent, message = send_reminder_email(invite_id, reminder_subject, reminder_message)
+                    if sent:
+                        st.success(f"✅ {message}")
+                    else:
+                        st.error(f"❌ {message}")
+            else:
+                st.error("Please enter both subject and message")
+        
+        if preview_reminder:
+            if reminder_subject and reminder_message:
+                st.markdown("#### 📧 Email Preview")
+                st.markdown(f"**Subject:** {reminder_subject}")
+                st.markdown("**Recipients:** All guests who responded 'Yes'")
+                st.markdown("**Message:**")
+                st.info(reminder_message)
+            else:
+                st.error("Please enter both subject and message")
+    else:
+        st.info("No guests with 'Yes' responses and email addresses found yet.")
+    
     # Email Test Section
     st.markdown("---")
-    st.markdown("### 📧 Email Test")
+    st.markdown("### 🧪 Email Test")
     st.info("Test your email notifications to ensure RSVP emails are working correctly.")
     
     test_email_address = st.text_input("Test Email Address", value=data.get("manager_email", ""), placeholder="Enter email to send test to")
@@ -1215,7 +1389,29 @@ def show_public_invite_page():
         ext = music_filename.split('.')[-1].lower() if '.' in music_filename else 'mp3'
         mime = 'audio/mpeg' if ext in ('mp3', 'mpeg') else ('audio/wav' if ext == 'wav' else 'audio/*')
         audio_b64 = base64.b64encode(music_bytes).decode('utf-8')
-        components.html(f"<audio autoplay loop style='display:none' src='data:{mime};base64,{audio_b64}'></audio>", height=0)
+        
+        # Option 2: Start muted, then unmute on first click (100% reliable)
+        music_html = f"""
+        <div style="display:none;">
+            <audio id="bgMusic" autoplay muted loop preload="auto">
+                <source src="data:{mime};base64,{audio_b64}" type="{mime}">
+            </audio>
+        </div>
+        
+        <script>
+            document.addEventListener('click', function() {{
+                const bgm = document.getElementById('bgMusic');
+                if (bgm) {{
+                    bgm.muted = false;
+                    bgm.play().catch(function(error) {{
+                        console.log('Unmute failed:', error);
+                    }});
+                }}
+            }}, {{ once: true }});
+        </script>
+        """
+        
+        components.html(music_html, height=150)
     
     # Display invitation with stored customization
     image_bytes = data.get("image_base64")
@@ -1244,7 +1440,7 @@ def show_public_invite_page():
         
         with col1:
             guest_name = st.text_input("Your Name *", placeholder="Enter your full name")
-            guest_email = st.text_input("Email Address", placeholder="your.email@example.com")
+            guest_email = st.text_input("Email Address *", placeholder="your.email@example.com", help="Required for event updates and reminders")
         
         with col2:
             attendance = st.radio("Will you attend? *", ["Yes", "No", "Maybe"], horizontal=True)
@@ -1258,6 +1454,14 @@ def show_public_invite_page():
     if submit_rsvp:
         if not guest_name.strip():
             st.error("Please enter your name to RSVP.")
+        elif not guest_email.strip():
+            st.error("Please enter your email address to RSVP.")
+        else:
+            # Validate email format
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, guest_email.strip()):
+                st.error("Please enter a valid email address.")
         else:
             rsvp_entry = {
                 "name": guest_name,
