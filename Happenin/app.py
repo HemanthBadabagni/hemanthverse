@@ -1390,6 +1390,9 @@ def show_public_invite_page():
         mime = 'audio/mpeg' if ext in ('mp3', 'mpeg') else ('audio/wav' if ext == 'wav' else 'audio/*')
         audio_b64 = base64.b64encode(music_bytes).decode('utf-8')
         
+        # Debug info for troubleshooting
+        st.info(f"🎵 Music Debug: File size: {len(music_bytes)} bytes, MIME: {mime}, Base64 length: {len(audio_b64)}")
+        
         # Option 2: Start muted, then unmute on first click (100% reliable)
         music_html = f"""
         <div style="display:none;">
@@ -1399,19 +1402,92 @@ def show_public_invite_page():
         </div>
         
         <script>
+            console.log('Music script loaded');
             document.addEventListener('click', function() {{
+                console.log('Click detected, attempting to unmute music');
                 const bgm = document.getElementById('bgMusic');
                 if (bgm) {{
+                    console.log('Audio element found:', bgm);
                     bgm.muted = false;
-                    bgm.play().catch(function(error) {{
+                    bgm.play().then(function() {{
+                        console.log('Music started successfully');
+                    }}).catch(function(error) {{
                         console.log('Unmute failed:', error);
                     }});
+                }} else {{
+                    console.log('Audio element not found');
                 }}
             }}, {{ once: true }});
+            
+            // Also try to start on page load (might work in some cases)
+            window.addEventListener('load', function() {{
+                console.log('Page loaded, checking audio element');
+                const bgm = document.getElementById('bgMusic');
+                if (bgm) {{
+                    console.log('Audio element found on load:', bgm);
+                    // Try to play muted first
+                    bgm.play().catch(function(error) {{
+                        console.log('Initial play failed (expected):', error);
+                    }});
+                }}
+            }});
         </script>
         """
         
         components.html(music_html, height=150)
+    else:
+        # Fallback: Try to use local music file
+        st.info("🎵 No music in invitation data, trying local music file...")
+        local_music_bytes = get_local_music_base64()
+        if local_music_bytes:
+            import streamlit.components.v1 as components
+            mime = 'audio/mpeg'
+            audio_b64 = base64.b64encode(local_music_bytes).decode('utf-8')
+            
+            st.info(f"🎵 Local Music Debug: File size: {len(local_music_bytes)} bytes, MIME: {mime}, Base64 length: {len(audio_b64)}")
+            
+            music_html = f"""
+            <div style="display:none;">
+                <audio id="bgMusic" autoplay muted loop preload="auto">
+                    <source src="data:{mime};base64,{audio_b64}" type="{mime}">
+                </audio>
+            </div>
+            
+            <script>
+                console.log('Local music script loaded');
+                document.addEventListener('click', function() {{
+                    console.log('Click detected, attempting to unmute local music');
+                    const bgm = document.getElementById('bgMusic');
+                    if (bgm) {{
+                        console.log('Audio element found:', bgm);
+                        bgm.muted = false;
+                        bgm.play().then(function() {{
+                            console.log('Local music started successfully');
+                        }}).catch(function(error) {{
+                            console.log('Unmute failed:', error);
+                        }});
+                    }} else {{
+                        console.log('Audio element not found');
+                    }}
+                }}, {{ once: true }});
+                
+                // Also try to start on page load
+                window.addEventListener('load', function() {{
+                    console.log('Page loaded, checking local audio element');
+                    const bgm = document.getElementById('bgMusic');
+                    if (bgm) {{
+                        console.log('Local audio element found on load:', bgm);
+                        bgm.play().catch(function(error) {{
+                            console.log('Initial local play failed (expected):', error);
+                        }});
+                    }}
+                }});
+            </script>
+            """
+            
+            components.html(music_html, height=150)
+        else:
+            st.warning("🎵 No music file found (neither in invitation data nor local file)")
     
     # Display invitation with stored customization
     image_bytes = data.get("image_base64")
