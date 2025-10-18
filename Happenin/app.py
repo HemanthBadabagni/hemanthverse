@@ -688,7 +688,8 @@ def display_envelope():
                             box-shadow:2px 2px 12px #a80000;
                             transition: transform 0.3s ease;">
             </div>
-            <div style="font-size:1.4em; font-family: 'Noto Serif', serif; color:#a80000; margin-top:1em; animation: fadeIn 2s ease-in; text-align: center;">
+            <div style="font-size:1.4em; font-family: 'Noto Serif', serif; color:#a80000;
+                        margin-top:1em; animation: fadeIn 2s ease-in; text-align: center;">
                 🎉 An invitation is waiting inside!<br>
                 <b>Click to open the envelope and reveal your invitation</b>
             </div>
@@ -707,6 +708,7 @@ def display_envelope():
         """,
         unsafe_allow_html=True
     )
+
 
 
 def display_invitation_card(data, image_bytes=None, text_color="#000000", font_scale=1.0, overlay_opacity=0.0, title_offset_px=0):
