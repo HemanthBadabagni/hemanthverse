@@ -812,7 +812,6 @@ def display_invitation_card(data, image_bytes=None, text_color="#000000", font_s
         <hr style="border:2px solid {text_color};margin:1.5em 0;position:relative;z-index:2;box-shadow:1px 1px 2px rgba(255,255,255,0.9);">
         <div class="invitation-message" style="font-size:{1.2*font_scale:.2f}em;color:{text_color};margin:1em 0 0.5em 0;padding:0.5em 0;position:relative;z-index:2;font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);line-height:1.6;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">
                 {data['invitation_message']}
-            </div>
         </div>
     """
     
