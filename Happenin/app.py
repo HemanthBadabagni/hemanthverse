@@ -679,35 +679,35 @@ def get_rsvp_analytics(invite_id):
 
 
 def display_envelope():
-    st.markdown(
-        """
-        <div style="display: flex; flex-direction: column; align-items: center; margin-top: 2em;">
-            <div style="animation: pulse 2s infinite;">
-                <img src="https://cdn.pixabay.com/photo/2016/04/01/10/09/envelope-1300157_1280.png"
-                     style="max-width: 90%; height: auto; border-radius:16px;
-                            box-shadow:2px 2px 12px #a80000;
-                            transition: transform 0.3s ease;">
-            </div>
-            <div style="font-size:1.4em; font-family: 'Noto Serif', serif; color:#a80000;
-                        margin-top:1em; animation: fadeIn 2s ease-in; text-align: center;">
-                🎉 An invitation is waiting inside!<br>
-                <b>Click to open the envelope and reveal your invitation</b>
-            </div>
-            <style>
-                @keyframes pulse {
-                    0% { transform: scale(1); }
-                    50% { transform: scale(1.05); }
-                    100% { transform: scale(1); }
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-            </style>
+    html = """
+    <div style="display: flex; flex-direction: column; align-items: center; margin-top: 2em;">
+        <div style="animation: pulse 2s infinite;">
+            <img src="https://cdn.pixabay.com/photo/2016/04/01/10/09/envelope-1300157_1280.png"
+                 style="max-width: 90%; height: auto; border-radius:16px;
+                        box-shadow:2px 2px 12px #a80000;
+                        transition: transform 0.3s ease;">
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        <div style="font-size:1.4em; font-family: 'Noto Serif', serif; color:#a80000;
+                    margin-top:1em; animation: fadeIn 2s ease-in; text-align: center;">
+            🎉 An invitation is waiting inside!<br>
+            <b>Click to open the envelope and reveal your invitation</b>
+        </div>
+        <style>
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+                100% { transform: scale(1); }
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+        </style>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+
 
 
 def display_invitation_card(data, image_bytes=None, text_color="#000000", font_scale=1.0, overlay_opacity=0.0, title_offset_px=0):
@@ -739,27 +739,85 @@ def display_invitation_card(data, image_bytes=None, text_color="#000000", font_s
     
     # Enhanced HTML with better responsive design and text visibility
     html_content = f"""
-        <div style="position:relative;{background_style}padding:3em 2em 2em 2em;border-radius:16px;border:2px solid {theme['accent']};font-family:{FONT_FAMILY};box-shadow:2px 2px 20px rgba(168,0,0,0.3);overflow:hidden;max-width:100%;box-sizing:border-box;">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {{
+                box-sizing: border-box;
+            }}
+            .invitation-container {{
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 auto !important;
+                padding: 1em 0.5em !important;
+            }}
+            @media (max-width: 768px) {{
+                .invitation-container {{
+                    padding: 0.8em 0.3em !important;
+                    margin: 0 !important;
+                }}
+                .invitation-text {{
+                    font-size: {1.6*font_scale:.2f}em !important;
+                    line-height: 1.2 !important;
+                }}
+                .invitation-subtitle {{
+                    font-size: {1.0*font_scale:.2f}em !important;
+                    line-height: 1.3 !important;
+                }}
+                .invitation-details {{
+                    font-size: {0.9*font_scale:.2f}em !important;
+                    line-height: 1.3 !important;
+                }}
+                .invitation-venue {{
+                    font-size: {0.8*font_scale:.2f}em !important;
+                    line-height: 1.3 !important;
+                }}
+                .invitation-message {{
+                    font-size: {0.9*font_scale:.2f}em !important;
+                    line-height: 1.4 !important;
+                }}
+            }}
+            @media (max-width: 480px) {{
+                .invitation-container {{
+                    padding: 0.5em 0.2em !important;
+                }}
+                .invitation-text {{
+                    font-size: {1.4*font_scale:.2f}em !important;
+                }}
+                .invitation-subtitle {{
+                    font-size: {0.9*font_scale:.2f}em !important;
+                }}
+                .invitation-details {{
+                    font-size: {0.8*font_scale:.2f}em !important;
+                }}
+                .invitation-venue {{
+                    font-size: {0.7*font_scale:.2f}em !important;
+                }}
+                .invitation-message {{
+                    font-size: {0.8*font_scale:.2f}em !important;
+                }}
+            }}
+        </style>
+        <div class="invitation-container" style="position:relative;{background_style}padding:2em 1em;border-radius:16px;border:2px solid {theme['accent']};font-family:{FONT_FAMILY};box-shadow:2px 2px 20px rgba(168,0,0,0.3);overflow:hidden;width:100%;max-width:100%;box-sizing:border-box;margin:0 auto;">
             {overlay}
-            <div style="text-align:center;position:relative;z-index:2;max-width:100%;">
+            <div style="text-align:center;position:relative;z-index:2;width:100%;max-width:100%;padding:0 0.5em;">
             {invocation_html}
             <div style="margin-top:{title_offset_px}px;">
-                <span style="font-size:{2.8*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:2px 2px 4px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">{data['event_name']}</span>
+                <span class="invitation-text" style="font-size:{2.8*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:2px 2px 4px rgba(255,255,255,0.9);display:block;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">{data['event_name']}</span>
             </div>
             <br>
-            <span style="font-size:{1.4*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">Hosted by {data['host_names']}</span><br>
-            <span style="font-size:{1.2*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">{data['event_date']} at {data['event_time']}</span><br>
-            <span style="font-size:{1.1*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">Venue: {data['venue_address']}</span>
+            <span class="invitation-subtitle" style="font-size:{1.4*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">Hosted by {data['host_names']}</span><br>
+            <span class="invitation-details" style="font-size:{1.2*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">{data['event_date']} at {data['event_time']}</span><br>
+            <span class="invitation-venue" style="font-size:{1.1*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">Venue: {data['venue_address']}</span>
         </div>
-        <hr style="border:2px solid {text_color};margin:2em 0;position:relative;z-index:2;box-shadow:1px 1px 2px rgba(255,255,255,0.9);">
-        <div style="font-size:{1.2*font_scale:.2f}em;color:{text_color};margin:1em 0 0.5em 0;padding:1em 0;position:relative;z-index:2;font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);line-height:1.6;word-wrap:break-word;">
+        <hr style="border:2px solid {text_color};margin:1.5em 0;position:relative;z-index:2;box-shadow:1px 1px 2px rgba(255,255,255,0.9);">
+        <div class="invitation-message" style="font-size:{1.2*font_scale:.2f}em;color:{text_color};margin:1em 0 0.5em 0;padding:0.5em 0;position:relative;z-index:2;font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);line-height:1.6;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">
                 {data['invitation_message']}
+            </div>
         </div>
     """
     
-    # Use st.components.v1.html for proper HTML rendering with responsive height
-    import streamlit.components.v1 as components
-    components.html(html_content, height=1000)
+    # Use st.markdown for better mobile responsiveness (no iframe constraints)
+    st.markdown(html_content, unsafe_allow_html=True)
 
 # --- Header ---
 st.markdown(
