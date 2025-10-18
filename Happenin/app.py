@@ -679,35 +679,34 @@ def get_rsvp_analytics(invite_id):
 
 
 def display_envelope():
-    st.markdown(
-        """
-        <div style="display: flex; flex-direction: column; align-items: center; margin-top: 2em;">
-            <div style="animation: pulse 2s infinite;">
-                <img src="https://cdn.pixabay.com/photo/2016/04/01/10/09/envelope-1300157_1280.png"
-                     style="max-width: 90%; height: auto; border-radius:16px;
-                            box-shadow:2px 2px 12px #a80000;
-                            transition: transform 0.3s ease;">
-            </div>
-            <div style="font-size:1.4em; font-family: 'Noto Serif', serif; color:#a80000;
-                        margin-top:1em; animation: fadeIn 2s ease-in; text-align: center;">
-                🎉 An invitation is waiting inside!<br>
-                <b>Click to open the envelope and reveal your invitation</b>
-            </div>
-            <style>
-                @keyframes pulse {
-                    0% { transform: scale(1); }
-                    50% { transform: scale(1.05); }
-                    100% { transform: scale(1); }
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-            </style>
+    html = """
+    <div style="display: flex; flex-direction: column; align-items: center; margin-top: 2em;">
+        <div style="animation: pulse 2s infinite;">
+            <img src="https://cdn.pixabay.com/photo/2016/04/01/10/09/envelope-1300157_1280.png"
+                 style="max-width: 90%; height: auto; border-radius:16px;
+                        box-shadow:2px 2px 12px #a80000;
+                        transition: transform 0.3s ease;">
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        <div style="font-size:1.4em; font-family: 'Noto Serif', serif; color:#a80000;
+                    margin-top:1em; animation: fadeIn 2s ease-in; text-align: center;">
+            🎉 An invitation is waiting inside!<br>
+            <b>Click to open the envelope and reveal your invitation</b>
+        </div>
+        <style>
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+                100% { transform: scale(1); }
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+        </style>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
 
 
 
