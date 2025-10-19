@@ -549,8 +549,8 @@ def create_test_invitation():
         logger.error(f"Error creating test invitation: {str(e)}")
         return None, f"Error creating test invitation: {str(e)}"
 
-def save_invitation(data):
-    invite_id = str(uuid.uuid4())
+def save_invitation(data, specific_id=None):
+    invite_id = specific_id if specific_id else str(uuid.uuid4())
     with open(f"{DB_PATH}/{invite_id}.json", "w", encoding="utf-8") as f:
         json.dump(data, f)
     
@@ -568,6 +568,24 @@ def save_invitation(data):
     
     return invite_id
 
+def recreate_invitation_with_id(invite_id, event_data, rsvp_data=None):
+    """Recreate an invitation with a specific ID and optionally add RSVP data"""
+    try:
+        # Save the invitation with the specific ID
+        saved_id = save_invitation(event_data, specific_id=invite_id)
+        
+        # Add RSVP data if provided
+        if rsvp_data:
+            for rsvp_entry in rsvp_data:
+                save_rsvp(invite_id, rsvp_entry)
+        
+        logger.info(f"Recreated invitation {invite_id} with RSVP data")
+        return saved_id, "Invitation recreated successfully"
+        
+    except Exception as e:
+        logger.error(f"Error recreating invitation {invite_id}: {str(e)}")
+        return None, f"Error recreating invitation: {str(e)}"
+
 def load_invitation(invite_id):
     try:
         with open(f"{DB_PATH}/{invite_id}.json", "r", encoding="utf-8") as f:
@@ -583,8 +601,8 @@ def get_base_url():
     
     # Check if running on Streamlit Cloud
     if os.getenv("STREAMLIT_CLOUD"):
-        # Use the actual deployed Streamlit Cloud URL
-        return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
+    # Use the actual deployed Streamlit Cloud URL
+    return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
     else:
         # Running locally - use localhost
         return "http://localhost:8501"
@@ -706,29 +724,29 @@ def get_rsvp_analytics(invite_id):
 def display_envelope():
     html = """
     <div style="display: flex; flex-direction: column; align-items: center; margin-top: 2em;">
-        <div style="animation: pulse 2s infinite;">
+            <div style="animation: pulse 2s infinite;">
             <img src="https://cdn.pixabay.com/photo/2016/04/01/10/09/envelope-1300157_1280.png"
                  style="max-width: 90%; height: auto; border-radius:16px;
                         box-shadow:2px 2px 12px #a80000;
                         transition: transform 0.3s ease;">
-        </div>
+            </div>
         <div style="font-size:1.4em; font-family: 'Noto Serif', serif; color:#a80000;
                     margin-top:1em; animation: fadeIn 2s ease-in; text-align: center;">
-            🎉 An invitation is waiting inside!<br>
-            <b>Click to open the envelope and reveal your invitation</b>
+                🎉 An invitation is waiting inside!<br>
+                <b>Click to open the envelope and reveal your invitation</b>
+            </div>
+            <style>
+                @keyframes pulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.05); }
+                    100% { transform: scale(1); }
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            </style>
         </div>
-        <style>
-            @keyframes pulse {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.05); }
-                100% { transform: scale(1); }
-            }
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-        </style>
-    </div>
     """
     st.markdown(html, unsafe_allow_html=True)
 
@@ -1242,6 +1260,94 @@ def show_event_admin_page():
         st.code(f"Admin URL: {admin_url}")
         st.code(f"Public URL: {public_url}")
     
+    # Recreate Missing Invitation Section
+    with st.expander("🔧 Recreate Missing Invitation", expanded=False):
+        st.markdown("**Use this section to recreate a missing invitation with specific ID and RSVP data**")
+        
+        with st.form("recreate_invitation_form"):
+            st.markdown("### Event Details")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                recreate_event_name = st.text_input("Event Name", value=data.get('event_name', ''))
+                recreate_host_names = st.text_input("Host Names", value=data.get('host_names', ''))
+                recreate_event_date = st.date_input("Event Date", value=datetime.strptime(data.get('event_date', '2025-01-01'), '%Y-%m-%d').date())
+            
+            with col2:
+                recreate_event_time = st.text_input("Event Time", value=data.get('event_time', ''))
+                recreate_venue = st.text_input("Venue Address", value=data.get('venue_address', ''))
+                recreate_theme = st.selectbox("Theme", ["Temple", "Floral", "Modern", "Classic"], index=["Temple", "Floral", "Modern", "Classic"].index(data.get('theme', 'Temple')))
+            
+            recreate_invocation = st.text_area("Invocation", value=data.get('invocation', ''))
+            recreate_message = st.text_area("Invitation Message", value=data.get('invitation_message', ''))
+            
+            st.markdown("### RSVP Data (JSON Format)")
+            st.markdown("**Paste your RSVP data in JSON format. Example:**")
+            st.code('''[
+  {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "response": "Yes",
+    "adults": 2,
+    "kids": 0,
+    "total_guests": 2,
+    "message": "Looking forward to it!",
+    "timestamp": "2025-10-16 19:30:27.909145"
+  }
+]''')
+            
+            rsvp_json = st.text_area("RSVP Data (JSON)", height=200, placeholder="Paste your RSVP data here...")
+            
+            recreate_submit = st.form_submit_button("🔄 Recreate Invitation with Original ID")
+            
+            if recreate_submit:
+                if not recreate_event_name.strip():
+                    st.error("Please enter an event name.")
+                else:
+                    try:
+                        # Parse RSVP data if provided
+                        rsvp_data = None
+                        if rsvp_json.strip():
+                            rsvp_data = json.loads(rsvp_json)
+                        
+                        # Create event data
+                        recreate_data = {
+                            "event_name": recreate_event_name,
+                            "host_names": recreate_host_names,
+                            "event_date": recreate_event_date.strftime("%Y-%m-%d"),
+                            "event_time": recreate_event_time,
+                            "venue_address": recreate_venue,
+                            "invocation": recreate_invocation,
+                            "invitation_message": recreate_message,
+                            "theme": recreate_theme,
+                            "image_base64": data.get("image_base64"),
+                            "music_base64": data.get("music_base64"),
+                            "music_filename": data.get("music_filename"),
+                            "manager_email": data.get("manager_email"),
+                            "text_color": data.get("text_color", "#000000"),
+                            "font_scale": data.get("font_scale", 1.0),
+                            "overlay_opacity": data.get("overlay_opacity", 0.15),
+                            "title_offset": data.get("title_offset", -20),
+                            "created_at": str(datetime.utcnow())
+                        }
+                        
+                        # Recreate the invitation with the original ID
+                        result_id, message = recreate_invitation_with_id(invite_id, recreate_data, rsvp_data)
+                        
+                        if result_id:
+                            st.success(f"✅ {message}")
+                            st.info(f"**Original Links Now Work:**")
+                            st.code(f"Public: {get_base_url()}?invite={invite_id}")
+                            st.code(f"Admin: {get_base_url()}?invite={invite_id}&admin=true")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {message}")
+                            
+                    except json.JSONDecodeError:
+                        st.error("❌ Invalid JSON format in RSVP data. Please check your JSON syntax.")
+                    except Exception as e:
+                        st.error(f"❌ Error recreating invitation: {str(e)}")
+    
     # Event details
     col1, col2 = st.columns([2, 1])
     with col1:
@@ -1625,8 +1731,8 @@ def show_public_invite_page():
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
             if not re.match(email_pattern, guest_email.strip()):
                 st.error("Please enter a valid email address.")
-            else:
-                rsvp_entry = {
+        else:
+            rsvp_entry = {
                 "name": guest_name,
                 "email": guest_email,
                 "response": attendance,
