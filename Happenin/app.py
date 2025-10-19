@@ -623,9 +623,18 @@ def recreate_invitation_with_id(invite_id, event_data, rsvp_data=None):
 
 def load_invitation(invite_id):
     try:
-        with open(f"{DB_PATH}/{invite_id}.json", "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
+        file_path = f"{DB_PATH}/{invite_id}.json"
+        logger.info(f"Attempting to load invitation from: {file_path}")
+        logger.info(f"File exists: {os.path.exists(file_path)}")
+        if os.path.exists(file_path):
+            logger.info(f"File size: {os.path.getsize(file_path)} bytes")
+        
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            logger.info(f"Successfully loaded invitation: {data.get('event_name', 'Unknown')}")
+            return data
+    except Exception as e:
+        logger.error(f"Failed to load invitation {invite_id}: {str(e)}")
         return None
 
 def get_base_url():
@@ -636,8 +645,8 @@ def get_base_url():
     
     # Check if running on Streamlit Cloud
     if os.getenv("STREAMLIT_CLOUD"):
-        # Use the actual deployed Streamlit Cloud URL
-        return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
+    # Use the actual deployed Streamlit Cloud URL
+    return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
     else:
         # Running locally - use localhost
         return "http://localhost:8501"
@@ -1730,13 +1739,18 @@ def show_event_admin_page():
 def show_public_invite_page():
     """PAGE 3: Public Invite Page - Guest-facing invitation (no envelope animation)"""
     invite_id = st.query_params.get("invite", None)
+    logger.info(f"Public invite page - invite_id: {invite_id}")
+    
     if not invite_id:
         st.error("No invitation ID provided.")
         return
     
     data = load_invitation(invite_id)
+    logger.info(f"Public invite page - data loaded: {data is not None}")
+    
     if not data:
         st.error("Invitation not found.")
+        logger.error(f"Invitation not found for ID: {invite_id}")
         return
     
     # Display invitation directly (no envelope animation)
@@ -1901,28 +1915,28 @@ def show_public_invite_page():
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
             if not re.match(email_pattern, guest_email.strip()):
                 st.error("Please enter a valid email address.")
+        else:
+            rsvp_entry = {
+                "name": guest_name,
+                "email": guest_email,
+                "response": attendance,
+                "adults": adults_count,
+                "kids": kids_count,
+                "total_guests": adults_count + kids_count,
+                "message": additional_message,
+                "timestamp": str(datetime.utcnow())
+            }
+                
+            save_rsvp(invite_id, rsvp_entry)
+            
+            # Send email notification
+            sent, reason = send_rsvp_email(invite_id, rsvp_entry)
+            
+            st.success("🎉 Thank you! Your RSVP has been recorded.")
+            if sent:
+                st.info("📧 Email notification sent to event organizer.")
             else:
-                rsvp_entry = {
-                    "name": guest_name,
-                    "email": guest_email,
-                    "response": attendance,
-                    "adults": adults_count,
-                    "kids": kids_count,
-                    "total_guests": adults_count + kids_count,
-                    "message": additional_message,
-                    "timestamp": str(datetime.utcnow())
-                }
-                
-                save_rsvp(invite_id, rsvp_entry)
-                
-                # Send email notification
-                sent, reason = send_rsvp_email(invite_id, rsvp_entry)
-                
-                st.success("🎉 Thank you! Your RSVP has been recorded.")
-                if sent:
-                    st.info("📧 Email notification sent to event organizer.")
-                else:
-                    st.warning(f"📧 Email notification not sent: {reason}")
+                st.warning(f"📧 Email notification not sent: {reason}")
                 
                 st.rerun()
     
