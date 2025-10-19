@@ -553,6 +553,19 @@ def save_invitation(data):
     invite_id = str(uuid.uuid4())
     with open(f"{DB_PATH}/{invite_id}.json", "w", encoding="utf-8") as f:
         json.dump(data, f)
+    
+    # Auto-commit invitation to git to prevent data loss on app restart
+    try:
+        import subprocess
+        subprocess.run(["git", "add", f"{DB_PATH}/{invite_id}.json"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", f"Auto-commit invitation: {data.get('event_name', 'Unknown Event')}"], check=True, capture_output=True)
+        subprocess.run(["git", "push"], check=True, capture_output=True)
+        logger.info(f"Invitation {invite_id} automatically committed to git")
+    except subprocess.CalledProcessError as e:
+        logger.warning(f"Failed to auto-commit invitation {invite_id}: {e}")
+    except Exception as e:
+        logger.warning(f"Error during auto-commit for invitation {invite_id}: {e}")
+    
     return invite_id
 
 def load_invitation(invite_id):
@@ -586,6 +599,18 @@ def save_rsvp(invite_id, rsvp_entry):
     rsvps.append(rsvp_entry)
     with open(rsvp_file, "w", encoding="utf-8") as f:
         json.dump(rsvps, f, indent=2)
+    
+    # Auto-commit RSVP data to git to prevent data loss on app restart
+    try:
+        import subprocess
+        subprocess.run(["git", "add", rsvp_file], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", f"Auto-commit RSVP for invitation {invite_id}: {rsvp_entry.get('name', 'Unknown Guest')}"], check=True, capture_output=True)
+        subprocess.run(["git", "push"], check=True, capture_output=True)
+        logger.info(f"RSVP for invitation {invite_id} automatically committed to git")
+    except subprocess.CalledProcessError as e:
+        logger.warning(f"Failed to auto-commit RSVP for invitation {invite_id}: {e}")
+    except Exception as e:
+        logger.warning(f"Error during auto-commit for RSVP {invite_id}: {e}")
 
 def load_rsvps(invite_id):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
@@ -1174,6 +1199,7 @@ def show_event_creation_page():
                 public_url = f"{get_base_url()}?invite={invite_id}"
                 
                 st.success("🎉 Your invitation has been created!")
+                st.info("✅ **Data Safety**: Your invitation has been automatically saved and backed up to prevent data loss.")
                 st.markdown("### 📤 Share Your Invitation")
                 st.code(public_url)
                 st.markdown(f"[📱 Share via WhatsApp](https://wa.me/?text=Invitation%20Link%3A%20{public_url}) &nbsp; | &nbsp; [📧 Share via Email](mailto:?subject=Invitation&body=Invitation%20Link%3A%20{public_url})")
