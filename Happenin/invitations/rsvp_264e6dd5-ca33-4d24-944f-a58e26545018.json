@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Teja",
+    "email": "",
+    "response": "Yes",
+    "adults": 3,
+    "kids": 1,
+    "total_guests": 4,
+    "message": "",
+    "timestamp": "2025-10-16 19:30:27.909145"
+  },
+  {
+    "name": "Abhinav Vinnakota",
+    "email": "",
+    "response": "Yes",
+    "adults": 2,
+    "kids": 2,
+    "total_guests": 4,
+    "message": "",
+    "timestamp": "2025-10-16 19:31:27.909145"
+  },
+  {
+    "name": "Chandana Kaza",
+    "email": "",
+    "response": "Yes",
+    "adults": 2,
+    "kids": 2,
+    "total_guests": 4,
+    "message": "",
+    "timestamp": "2025-10-16 19:32:27.909145"
+  },
+  {
+    "name": "Raja Koneru",
+    "email": "",
+    "response": "Yes",
+    "adults": 3,
+    "kids": 0,
+    "total_guests": 3,
+    "message": "",
+    "timestamp": "2025-10-16 19:33:27.909145"
+  },
+  {
+    "name": "Aditya Koyyalamudi",
+    "email": "",
+    "response": "Yes",
+    "adults": 1,
+    "kids": 0,
+    "total_guests": 1,
+    "message": "",
+    "timestamp": "2025-10-16 19:34:27.909145"
+  },
+  {
+    "name": "Keerthi Chand (KC)",
+    "email": "",
+    "response": "Yes",
+    "adults": 2,
+    "kids": 1,
+    "total_guests": 3,
+    "message": "",
+    "timestamp": "2025-10-16 19:35:27.909145"
+  },
+  {
+    "name": "Ramya Srinivas",
+    "email": "",
+    "response": "Yes",
+    "adults": 3,
+    "kids": 1,
+    "total_guests": 4,
+    "message": "",
+    "timestamp": "2025-10-16 19:36:27.909145"
+  },
+  {
+    "name": "Hemanth",
+    "email": "",
+    "response": "Yes",
+    "adults": 5,
+    "kids": 0,
+    "total_guests": 5,
+    "message": "",
+    "timestamp": "2025-10-16 19:37:27.909145"
+  }
+]
