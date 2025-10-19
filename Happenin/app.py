@@ -14,6 +14,8 @@ from email.message import EmailMessage
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Force deployment update - fix invitation loading issue
+
 DB_PATH = "invitations"
 os.makedirs(DB_PATH, exist_ok=True)
 
