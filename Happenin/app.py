@@ -551,20 +551,52 @@ def create_test_invitation():
 
 def save_invitation(data, specific_id=None):
     invite_id = specific_id if specific_id else str(uuid.uuid4())
+    
+    # Add safety metadata
+    data['_safety_metadata'] = {
+        'created_at': str(datetime.utcnow()),
+        'created_by': 'streamlit_app',
+        'version': '1.0',
+        'backup_status': 'pending'
+    }
+    
+    # Save to file
     with open(f"{DB_PATH}/{invite_id}.json", "w", encoding="utf-8") as f:
         json.dump(data, f)
     
-    # Auto-commit invitation to git to prevent data loss on app restart
+    # Multiple backup strategies to prevent data loss
+    backup_success = False
+    
+    # Strategy 1: Auto-commit to git
     try:
         import subprocess
         subprocess.run(["git", "add", f"{DB_PATH}/{invite_id}.json"], check=True, capture_output=True)
         subprocess.run(["git", "commit", "-m", f"Auto-commit invitation: {data.get('event_name', 'Unknown Event')}"], check=True, capture_output=True)
         subprocess.run(["git", "push"], check=True, capture_output=True)
         logger.info(f"Invitation {invite_id} automatically committed to git")
+        backup_success = True
     except subprocess.CalledProcessError as e:
         logger.warning(f"Failed to auto-commit invitation {invite_id}: {e}")
     except Exception as e:
         logger.warning(f"Error during auto-commit for invitation {invite_id}: {e}")
+    
+    # Strategy 2: Create backup copy
+    try:
+        backup_file = f"{DB_PATH}/backup_{invite_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(backup_file, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        logger.info(f"Backup created: {backup_file}")
+    except Exception as e:
+        logger.warning(f"Failed to create backup for invitation {invite_id}: {e}")
+    
+    # Strategy 3: Update safety metadata
+    try:
+        data['_safety_metadata']['backup_status'] = 'completed' if backup_success else 'failed'
+        data['_safety_metadata']['backup_timestamp'] = str(datetime.utcnow())
+        with open(f"{DB_PATH}/{invite_id}.json", "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    except Exception as e:
+        logger.warning(f"Failed to update safety metadata for invitation {invite_id}: {e}")
     
     return invite_id
 
@@ -609,26 +641,64 @@ def get_base_url():
 
 def save_rsvp(invite_id, rsvp_entry):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
+    
+    # Add safety metadata to RSVP entry
+    rsvp_entry['_safety_metadata'] = {
+        'timestamp': str(datetime.utcnow()),
+        'backup_status': 'pending'
+    }
+    
     try:
         with open(rsvp_file, "r", encoding="utf-8") as f:
             rsvps = json.load(f)
     except Exception:
         rsvps = []
+    
     rsvps.append(rsvp_entry)
+    
+    # Save RSVP data
     with open(rsvp_file, "w", encoding="utf-8") as f:
         json.dump(rsvps, f, indent=2)
     
-    # Auto-commit RSVP data to git to prevent data loss on app restart
+    # Multiple backup strategies for RSVP data
+    backup_success = False
+    
+    # Strategy 1: Auto-commit RSVP data to git
     try:
         import subprocess
         subprocess.run(["git", "add", rsvp_file], check=True, capture_output=True)
         subprocess.run(["git", "commit", "-m", f"Auto-commit RSVP for invitation {invite_id}: {rsvp_entry.get('name', 'Unknown Guest')}"], check=True, capture_output=True)
         subprocess.run(["git", "push"], check=True, capture_output=True)
         logger.info(f"RSVP for invitation {invite_id} automatically committed to git")
+        backup_success = True
     except subprocess.CalledProcessError as e:
         logger.warning(f"Failed to auto-commit RSVP for invitation {invite_id}: {e}")
     except Exception as e:
         logger.warning(f"Error during auto-commit for RSVP {invite_id}: {e}")
+    
+    # Strategy 2: Create backup copy
+    try:
+        backup_file = f"{DB_PATH}/backup_rsvp_{invite_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(backup_file, "w", encoding="utf-8") as f:
+            json.dump(rsvps, f, indent=2)
+        logger.info(f"RSVP backup created: {backup_file}")
+    except Exception as e:
+        logger.warning(f"Failed to create RSVP backup for invitation {invite_id}: {e}")
+    
+    # Strategy 3: Update safety metadata
+    try:
+        rsvp_entry['_safety_metadata']['backup_status'] = 'completed' if backup_success else 'failed'
+        rsvp_entry['_safety_metadata']['backup_timestamp'] = str(datetime.utcnow())
+        # Update the entry in the list
+        for i, rsvp in enumerate(rsvps):
+            if rsvp.get('name') == rsvp_entry.get('name') and rsvp.get('timestamp') == rsvp_entry.get('timestamp'):
+                rsvps[i] = rsvp_entry
+                break
+        
+        with open(rsvp_file, "w", encoding="utf-8") as f:
+            json.dump(rsvps, f, indent=2)
+    except Exception as e:
+        logger.warning(f"Failed to update RSVP safety metadata for invitation {invite_id}: {e}")
 
 def load_rsvps(invite_id):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
@@ -1461,6 +1531,103 @@ def show_event_admin_page():
                 st.info("No 'Maybe' responses yet.")
     else:
         st.info("📊 No RSVPs yet. Share the invitation link to start receiving responses!")
+    
+    # Edit RSVP Data Section (only for specific invitation)
+    if invite_id == "264e6dd5-ca33-4d24-944f-a58e26545018":
+        st.markdown("---")
+        st.markdown("### ✏️ Edit RSVP Data")
+        
+        with st.expander("Edit Individual RSVPs", expanded=False):
+            rsvps = load_rsvps(invite_id)
+            if rsvps:
+                for i, rsvp in enumerate(rsvps):
+                    with st.container():
+                        col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+                        
+                        with col1:
+                            st.write(f"**{rsvp.get('name', 'Unknown')}**")
+                            if rsvp.get('email'):
+                                st.caption(f"Email: {rsvp['email']}")
+                        
+                        with col2:
+                            new_response = st.selectbox(
+                                "Response", 
+                                ["Yes", "No", "Maybe"], 
+                                index=["Yes", "No", "Maybe"].index(rsvp.get('response', 'Yes')),
+                                key=f"response_{i}"
+                            )
+                        
+                        with col3:
+                            new_adults = st.number_input(
+                                "Adults", 
+                                min_value=0, 
+                                max_value=20, 
+                                value=rsvp.get('adults', 0),
+                                key=f"adults_{i}"
+                            )
+                        
+                        with col4:
+                            new_kids = st.number_input(
+                                "Children", 
+                                min_value=0, 
+                                max_value=20, 
+                                value=rsvp.get('kids', 0),
+                                key=f"kids_{i}"
+                            )
+                        
+                        # Update button for each RSVP
+                        if st.button(f"Update {rsvp.get('name', 'Unknown')}", key=f"update_{i}"):
+                            # Update the RSVP data
+                            rsvps[i]['response'] = new_response
+                            rsvps[i]['adults'] = new_adults
+                            rsvps[i]['kids'] = new_kids
+                            rsvps[i]['total_guests'] = new_adults + new_kids
+                            rsvps[i]['_last_modified'] = str(datetime.utcnow())
+                            
+                            # Save updated RSVPs
+                            rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
+                            with open(rsvp_file, "w", encoding="utf-8") as f:
+                                json.dump(rsvps, f, indent=2)
+                            
+                            # Auto-commit the changes
+                            try:
+                                import subprocess
+                                subprocess.run(["git", "add", rsvp_file], check=True, capture_output=True)
+                                subprocess.run(["git", "commit", "-m", f"Update RSVP for {rsvp.get('name', 'Unknown')} in invitation {invite_id}"], check=True, capture_output=True)
+                                subprocess.run(["git", "push"], check=True, capture_output=True)
+                                st.success(f"✅ Updated {rsvp.get('name', 'Unknown')}'s RSVP")
+                                st.rerun()
+                            except Exception as e:
+                                st.warning(f"⚠️ RSVP updated but failed to commit to git: {e}")
+                        
+                        st.markdown("---")
+            else:
+                st.info("No RSVPs found to edit.")
+        
+        # Bulk operations for this specific invitation
+        with st.expander("Bulk Operations", expanded=False):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("🗑️ Clear All RSVPs", type="secondary"):
+                    if st.session_state.get('confirm_clear', False):
+                        clear_rsvps(invite_id)
+                        st.success("✅ All RSVPs cleared")
+                        st.session_state.confirm_clear = False
+                        st.rerun()
+                    else:
+                        st.session_state.confirm_clear = True
+                        st.warning("⚠️ Click again to confirm clearing all RSVPs")
+            
+            with col2:
+                if st.button("📥 Export RSVPs", type="secondary"):
+                    csv_data = get_rsvp_csv(invite_id)
+                    st.download_button(
+                        "Download CSV",
+                        csv_data,
+                        file_name=f"rsvps_{invite_id}.csv",
+                        mime="text/csv"
+                    )
     
     # Email Management Section
     st.markdown("---")
