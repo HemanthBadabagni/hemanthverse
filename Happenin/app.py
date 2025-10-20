@@ -1915,8 +1915,8 @@ def show_public_invite_page():
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
             if not re.match(email_pattern, guest_email.strip()):
                 st.error("Please enter a valid email address.")
-        else:
-            rsvp_entry = {
+            else:
+                rsvp_entry = {
                 "name": guest_name,
                 "email": guest_email,
                 "response": attendance,
