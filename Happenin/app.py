@@ -645,8 +645,8 @@ def get_base_url():
     
     # Check if running on Streamlit Cloud
     if os.getenv("STREAMLIT_CLOUD"):
-    # Use the actual deployed Streamlit Cloud URL
-    return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
+        # Use the actual deployed Streamlit Cloud URL
+        return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
     else:
         # Running locally - use localhost
         return "http://localhost:8501"
