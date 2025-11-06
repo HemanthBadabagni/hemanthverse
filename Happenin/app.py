@@ -658,6 +658,28 @@ def clear_rsvps(invite_id):
     with open(rsvp_file, "w", encoding="utf-8") as f:
         json.dump([], f)
 
+def update_rsvp(invite_id, rsvp_index, updated_rsvp):
+    """Update an existing RSVP entry"""
+    rsvps = load_rsvps(invite_id)
+    if 0 <= rsvp_index < len(rsvps):
+        rsvps[rsvp_index] = updated_rsvp
+        rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
+        with open(rsvp_file, "w", encoding="utf-8") as f:
+            json.dump(rsvps, f, indent=2)
+        return True
+    return False
+
+def delete_rsvp(invite_id, rsvp_index):
+    """Delete an RSVP entry"""
+    rsvps = load_rsvps(invite_id)
+    if 0 <= rsvp_index < len(rsvps):
+        rsvps.pop(rsvp_index)
+        rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
+        with open(rsvp_file, "w", encoding="utf-8") as f:
+            json.dump(rsvps, f, indent=2)
+        return True
+    return False
+
 def get_rsvp_analytics(invite_id):
     """Get RSVP analytics and statistics"""
     rsvps = load_rsvps(invite_id)
@@ -1295,9 +1317,215 @@ def show_event_admin_page():
     else:
         st.info("📊 No RSVPs yet. Share the invitation link to start receiving responses!")
     
+    # RSVP Management Section
+    st.markdown("---")
+    st.markdown("### ✏️ RSVP Management")
+    
+    rsvp_tab1, rsvp_tab2, rsvp_tab3 = st.tabs(["➕ Add RSVP", "📝 Edit RSVPs", "📧 Manage Emails"])
+    
+    with rsvp_tab1:
+        st.markdown("#### ➕ Manually Add RSVP")
+        st.info("Use this to add RSVPs from past invites or manually add guest responses.")
+        
+        with st.form("add_manual_rsvp_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                manual_name = st.text_input("Guest Name *", placeholder="Enter guest name")
+                manual_email = st.text_input("Email Address *", placeholder="guest@example.com")
+                manual_response = st.selectbox("RSVP Response *", ["Yes", "No", "Maybe"], index=0)
+            
+            with col2:
+                manual_adults = st.number_input("Number of Adults", min_value=0, max_value=50, value=1 if manual_response == "Yes" else 0)
+                manual_kids = st.number_input("Number of Children", min_value=0, max_value=50, value=0)
+                manual_timestamp = st.text_input("Timestamp (optional)", placeholder="Leave empty for current time", help="Format: YYYY-MM-DD HH:MM:SS or leave empty")
+            
+            manual_message = st.text_area("Message (optional)", placeholder="Any additional notes or comments...")
+            
+            submit_manual_rsvp = st.form_submit_button("➕ Add RSVP", use_container_width=True)
+        
+        if submit_manual_rsvp:
+            if not manual_name.strip() or not manual_email.strip():
+                st.error("Please enter both name and email address.")
+            else:
+                # Validate email format
+                import re
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                if not re.match(email_pattern, manual_email.strip()):
+                    st.error("Please enter a valid email address.")
+                else:
+                    # Use provided timestamp or current time
+                    if manual_timestamp.strip():
+                        rsvp_timestamp = manual_timestamp.strip()
+                    else:
+                        rsvp_timestamp = str(datetime.utcnow())
+                    
+                    manual_rsvp_entry = {
+                        "name": manual_name.strip(),
+                        "email": manual_email.strip(),
+                        "response": manual_response,
+                        "adults": manual_adults,
+                        "kids": manual_kids,
+                        "total_guests": manual_adults + manual_kids,
+                        "message": manual_message.strip() if manual_message else "",
+                        "timestamp": rsvp_timestamp
+                    }
+                    save_rsvp(invite_id, manual_rsvp_entry)
+                    st.success(f"✅ RSVP added for {manual_name.strip()}!")
+                    st.rerun()
+    
+    with rsvp_tab2:
+        st.markdown("#### 📝 Edit or Delete RSVPs")
+        all_rsvps = load_rsvps(invite_id)
+        
+        if all_rsvps:
+            st.info(f"Total RSVPs: {len(all_rsvps)}")
+            
+            # Display RSVPs with edit/delete options
+            for idx, rsvp in enumerate(reversed(all_rsvps)):
+                with st.expander(f"✏️ {rsvp.get('name', 'Unknown')} - {rsvp.get('response', 'N/A')} ({rsvp.get('timestamp', '')[:19] if rsvp.get('timestamp') else 'No timestamp'})"):
+                    with st.form(f"edit_rsvp_{len(all_rsvps) - idx - 1}"):
+                        edit_col1, edit_col2 = st.columns(2)
+                        
+                        with edit_col1:
+                            edit_name = st.text_input("Name", value=rsvp.get('name', ''), key=f"name_{idx}")
+                            edit_email = st.text_input("Email", value=rsvp.get('email', ''), key=f"email_{idx}")
+                            edit_response = st.selectbox("Response", ["Yes", "No", "Maybe"], 
+                                                       index=["Yes", "No", "Maybe"].index(rsvp.get('response', 'Yes')) if rsvp.get('response') in ["Yes", "No", "Maybe"] else 0,
+                                                       key=f"response_{idx}")
+                        
+                        with edit_col2:
+                            edit_adults = st.number_input("Adults", min_value=0, max_value=50, value=rsvp.get('adults', 0), key=f"adults_{idx}")
+                            edit_kids = st.number_input("Children", min_value=0, max_value=50, value=rsvp.get('kids', 0), key=f"kids_{idx}")
+                            edit_timestamp = st.text_input("Timestamp", value=rsvp.get('timestamp', str(datetime.utcnow()))[:19], key=f"timestamp_{idx}")
+                        
+                        edit_message = st.text_area("Message", value=rsvp.get('message', ''), key=f"message_{idx}")
+                        
+                        col_edit1, col_edit2 = st.columns(2)
+                        
+                        with col_edit1:
+                            update_btn = st.form_submit_button("💾 Update RSVP", use_container_width=True)
+                        with col_edit2:
+                            delete_btn = st.form_submit_button("🗑️ Delete RSVP", use_container_width=True)
+                        
+                        if update_btn:
+                            rsvp_index = len(all_rsvps) - idx - 1
+                            updated_rsvp = {
+                                "name": edit_name.strip(),
+                                "email": edit_email.strip(),
+                                "response": edit_response,
+                                "adults": edit_adults,
+                                "kids": edit_kids,
+                                "total_guests": edit_adults + edit_kids,
+                                "message": edit_message.strip(),
+                                "timestamp": edit_timestamp.strip()
+                            }
+                            if update_rsvp(invite_id, rsvp_index, updated_rsvp):
+                                st.success("✅ RSVP updated successfully!")
+                                st.rerun()
+                            else:
+                                st.error("❌ Failed to update RSVP.")
+                        
+                        if delete_btn:
+                            rsvp_index = len(all_rsvps) - idx - 1
+                            if delete_rsvp(invite_id, rsvp_index):
+                                st.success("✅ RSVP deleted successfully!")
+                                st.rerun()
+                            else:
+                                st.error("❌ Failed to delete RSVP.")
+        else:
+            st.info("No RSVPs to edit yet.")
+    
+    with rsvp_tab3:
+        st.markdown("#### 📧 Manually Add Emails to Guest List")
+        st.info("Add emails manually for guests who RSVP'd through other channels (phone, WhatsApp, etc.)")
+        
+        with st.form("add_email_form"):
+            email_col1, email_col2 = st.columns(2)
+            
+            with email_col1:
+                email_name = st.text_input("Guest Name *", placeholder="Enter guest name")
+                email_address = st.text_input("Email Address *", placeholder="guest@example.com")
+            
+            with email_col2:
+                email_response = st.selectbox("RSVP Response", ["Yes", "No", "Maybe"], index=0)
+                email_adults = st.number_input("Adults", min_value=0, max_value=50, value=1)
+                email_kids = st.number_input("Children", min_value=0, max_value=50, value=0)
+            
+            email_message = st.text_area("Notes (optional)", placeholder="Any additional information...")
+            
+            add_email_btn = st.form_submit_button("➕ Add Email to Guest List", use_container_width=True)
+        
+        if add_email_btn:
+            if not email_name.strip() or not email_address.strip():
+                st.error("Please enter both name and email address.")
+            else:
+                # Validate email format
+                import re
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                if not re.match(email_pattern, email_address.strip()):
+                    st.error("Please enter a valid email address.")
+                else:
+                    email_rsvp_entry = {
+                        "name": email_name.strip(),
+                        "email": email_address.strip(),
+                        "response": email_response,
+                        "adults": email_adults,
+                        "kids": email_kids,
+                        "total_guests": email_adults + email_kids,
+                        "message": email_message.strip() if email_message else "",
+                        "timestamp": str(datetime.utcnow())
+                    }
+                    save_rsvp(invite_id, email_rsvp_entry)
+                    st.success(f"✅ Email added for {email_name.strip()}!")
+                    st.rerun()
+        
+        st.markdown("---")
+        st.markdown("#### 📊 Quick Count Adjustment")
+        st.info("Manually adjust guest counts if you have offline RSVPs or need to correct totals.")
+        
+        analytics = get_rsvp_analytics(invite_id)
+        
+        with st.form("adjust_counts_form"):
+            st.markdown("**Current Totals:**")
+            st.write(f"- Total Adults (from RSVPs): {analytics['total_adults']}")
+            st.write(f"- Total Children (from RSVPs): {analytics['total_children']}")
+            st.write(f"- Total Guests (from RSVPs): {analytics['total_guests']}")
+            
+            st.markdown("**Manual Adjustment:**")
+            adjust_adults = st.number_input("Adjust Adults Count", min_value=-analytics['total_adults'], max_value=100, value=0, 
+                                          help="Enter positive number to add, negative to subtract")
+            adjust_kids = st.number_input("Adjust Children Count", min_value=-analytics['total_children'], max_value=100, value=0,
+                                        help="Enter positive number to add, negative to subtract")
+            
+            adjust_notes = st.text_area("Adjustment Notes", placeholder="Reason for adjustment (e.g., 'Added 5 offline RSVPs')")
+            
+            adjust_btn = st.form_submit_button("💾 Save Adjustment as RSVP Entry", use_container_width=True)
+        
+        if adjust_btn:
+            if adjust_adults != 0 or adjust_kids != 0:
+                adjustment_entry = {
+                    "name": "Manual Adjustment",
+                    "email": data.get("manager_email", "admin@example.com"),
+                    "response": "Yes",
+                    "adults": adjust_adults,
+                    "kids": adjust_kids,
+                    "total_guests": adjust_adults + adjust_kids,
+                    "message": f"Manual count adjustment: {adjust_notes.strip() if adjust_notes else 'Adjusted guest counts manually'}",
+                    "timestamp": str(datetime.utcnow())
+                }
+                save_rsvp(invite_id, adjustment_entry)
+                st.success(f"✅ Adjustment saved! Added {adjust_adults} adults and {adjust_kids} children.")
+                st.rerun()
+            else:
+                st.warning("No adjustment made. Both values are 0.")
+    
     # Email Management Section
     st.markdown("---")
     st.markdown("### 📧 Email Management")
+    
+    # Recalculate analytics to get latest RSVP data
+    analytics = get_rsvp_analytics(invite_id)
     
     # Show email list for Yes responses
     yes_guests = [rsvp for rsvp in analytics["yes_list"] if rsvp.get("email")]
