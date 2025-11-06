@@ -414,6 +414,7 @@ We look forward to seeing you at the event!
     except Exception as e:
         return False, f"SMTP error: {str(e)}"
 
+def send_test_email(to_address):
     """Send a test email using current SMTP configuration.
 
     Returns (ok, message)
@@ -568,13 +569,40 @@ def get_base_url():
     if manual_url:
         return manual_url
     
-    # Check if running on Streamlit Cloud
+    # Check if running on Streamlit Cloud using multiple methods
+    # Method 1: Check STREAMLIT_CLOUD_BASE_URL (most reliable)
+    cloud_base_url = os.getenv("STREAMLIT_CLOUD_BASE_URL")
+    if cloud_base_url:
+        # Extract the base URL (remove any path)
+        from urllib.parse import urlparse
+        parsed = urlparse(cloud_base_url)
+        return f"{parsed.scheme}://{parsed.netloc}"
+    
+    # Method 2: Check STREAMLIT_CLOUD environment variable
     if os.getenv("STREAMLIT_CLOUD"):
-        # Use the actual deployed Streamlit Cloud URL
         return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
-    else:
-        # Running locally - use localhost
-        return "http://localhost:8501"
+    
+    # Method 3: Check if running in headless mode (Streamlit Cloud indicator)
+    try:
+        import streamlit as st
+        if st.get_option("server.headless"):
+            # We're on Streamlit Cloud, return the known URL
+            return "https://happenin-dhuv3putrr8ddhdufqzgcm.streamlit.app"
+    except:
+        pass
+    
+    # Method 4: Check if we can determine from runtime config
+    try:
+        import streamlit as st
+        # Try to get the server address from Streamlit config
+        server_address = st.get_option("server.address")
+        if server_address and "streamlit.app" in server_address:
+            return f"https://{server_address}"
+    except:
+        pass
+    
+    # Default: Running locally - use localhost
+    return "http://localhost:8501"
 
 def save_rsvp(invite_id, rsvp_entry):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
@@ -711,10 +739,10 @@ def display_invitation_card(data, image_bytes=None, text_color="#000000", font_s
         background_style = (
             f"background: url('data:image/png;base64,{image_bytes}') center center / cover no-repeat;"
             f"background-color: {theme['bg']};"
-            "min-height: 80vh;"
+            "min-height: 100vh;"
             "width: 100%;"
             "position: relative;"
-            "background-attachment: scroll;"
+            "background-attachment: fixed;"
         )
         # Enhanced overlay for better text readability
         overlay = (
@@ -722,7 +750,7 @@ def display_invitation_card(data, image_bytes=None, text_color="#000000", font_s
             if overlay_opacity and overlay_opacity > 0 else ""
         )
     else:
-        background_style = f"background-color: {theme['bg']};min-height: 80vh;width: 100%;position: relative;"
+        background_style = f"background-color: {theme['bg']};min-height: 100vh;width: 100%;position: relative;"
         overlay = ""
     
     # Build the invocation HTML separately
@@ -732,85 +760,28 @@ def display_invitation_card(data, image_bytes=None, text_color="#000000", font_s
     
     # Enhanced HTML with better responsive design and text visibility
     html_content = f"""
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            * {{
-                box-sizing: border-box;
-            }}
-            .invitation-container {{
-                width: 100% !important;
-                max-width: 100% !important;
-                margin: 0 auto !important;
-                padding: 1em 0.5em !important;
-            }}
-            @media (max-width: 768px) {{
-                .invitation-container {{
-                    padding: 0.8em 0.3em !important;
-                    margin: 0 !important;
-                }}
-                .invitation-text {{
-                    font-size: {1.6*font_scale:.2f}em !important;
-                    line-height: 1.2 !important;
-                }}
-                .invitation-subtitle {{
-                    font-size: {1.0*font_scale:.2f}em !important;
-                    line-height: 1.3 !important;
-                }}
-                .invitation-details {{
-                    font-size: {0.9*font_scale:.2f}em !important;
-                    line-height: 1.3 !important;
-                }}
-                .invitation-venue {{
-                    font-size: {0.8*font_scale:.2f}em !important;
-                    line-height: 1.3 !important;
-                }}
-                .invitation-message {{
-                    font-size: {0.9*font_scale:.2f}em !important;
-                    line-height: 1.4 !important;
-                }}
-            }}
-            @media (max-width: 480px) {{
-                .invitation-container {{
-                    padding: 0.5em 0.2em !important;
-                }}
-                .invitation-text {{
-                    font-size: {1.4*font_scale:.2f}em !important;
-                }}
-                .invitation-subtitle {{
-                    font-size: {0.9*font_scale:.2f}em !important;
-                }}
-                .invitation-details {{
-                    font-size: {0.8*font_scale:.2f}em !important;
-                }}
-                .invitation-venue {{
-                    font-size: {0.7*font_scale:.2f}em !important;
-                }}
-                .invitation-message {{
-                    font-size: {0.8*font_scale:.2f}em !important;
-                }}
-            }}
-        </style>
-        <div class="invitation-container" style="position:relative;{background_style}padding:2em 1em;border-radius:16px;border:2px solid {theme['accent']};font-family:{FONT_FAMILY};box-shadow:2px 2px 20px rgba(168,0,0,0.3);overflow:hidden;width:100%;max-width:100%;box-sizing:border-box;margin:0 auto;">
+        <div style="position:relative;{background_style}padding:3em 2em 2em 2em;border-radius:16px;border:2px solid {theme['accent']};font-family:{FONT_FAMILY};box-shadow:2px 2px 20px rgba(168,0,0,0.3);overflow:hidden;max-width:100%;box-sizing:border-box;">
             {overlay}
-            <div style="text-align:center;position:relative;z-index:2;width:100%;max-width:100%;padding:0 0.5em;">
+            <div style="text-align:center;position:relative;z-index:2;max-width:100%;">
             {invocation_html}
             <div style="margin-top:{title_offset_px}px;">
-                <span class="invitation-text" style="font-size:{2.8*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:2px 2px 4px rgba(255,255,255,0.9);display:block;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">{data['event_name']}</span>
+                <span style="font-size:{2.8*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:2px 2px 4px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">{data['event_name']}</span>
             </div>
             <br>
-            <span class="invitation-subtitle" style="font-size:{1.4*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">Hosted by {data['host_names']}</span><br>
-            <span class="invitation-details" style="font-size:{1.2*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">{data['event_date']} at {data['event_time']}</span><br>
-            <span class="invitation-venue" style="font-size:{1.1*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">Venue: {data['venue_address']}</span>
+            <span style="font-size:{1.4*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">Hosted by {data['host_names']}</span><br>
+            <span style="font-size:{1.2*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">{data['event_date']} at {data['event_time']}</span><br>
+            <span style="font-size:{1.1*font_scale:.2f}em;color:{text_color};font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);display:block;word-wrap:break-word;">Venue: {data['venue_address']}</span>
         </div>
-        <hr style="border:2px solid {text_color};margin:1.5em 0;position:relative;z-index:2;box-shadow:1px 1px 2px rgba(255,255,255,0.9);">
-        <div class="invitation-message" style="font-size:{1.2*font_scale:.2f}em;color:{text_color};margin:1em 0 0.5em 0;padding:0.5em 0;position:relative;z-index:2;font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);line-height:1.6;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;">
+        <hr style="border:2px solid {text_color};margin:2em 0;position:relative;z-index:2;box-shadow:1px 1px 2px rgba(255,255,255,0.9);">
+        <div style="font-size:{1.2*font_scale:.2f}em;color:{text_color};margin:1em 0 0.5em 0;padding:1em 0;position:relative;z-index:2;font-weight:bold;text-shadow:1px 1px 2px rgba(255,255,255,0.9);line-height:1.6;word-wrap:break-word;">
                 {data['invitation_message']}
             </div>
         </div>
     """
     
-    # Use st.markdown for better mobile responsiveness (no iframe constraints)
-    st.markdown(html_content, unsafe_allow_html=True)
+    # Use st.components.v1.html for proper HTML rendering with responsive height
+    import streamlit.components.v1 as components
+    components.html(html_content, height=1000)
 
 # --- Header ---
 st.markdown(
@@ -1640,4 +1611,3 @@ elif current_page == "admin":
 elif current_page == "public":
     # PAGE 3: Public Invite Page
     show_public_invite_page()
-
