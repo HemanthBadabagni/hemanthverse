@@ -17,6 +17,29 @@ logger = logging.getLogger(__name__)
 DB_PATH = "invitations"
 os.makedirs(DB_PATH, exist_ok=True)
 
+# Storage configuration - will be initialized in get_storage_config()
+def get_storage_config():
+    """Get storage configuration from environment or Streamlit secrets"""
+    try:
+        if hasattr(st, 'secrets'):
+            return {
+                "use_cloud": st.secrets.get("USE_CLOUD_STORAGE", "false").lower() == "true",
+                "supabase_url": st.secrets.get("SUPABASE_URL", None),
+                "supabase_key": st.secrets.get("SUPABASE_KEY", None),
+                "github_token": st.secrets.get("GITHUB_TOKEN", None),
+                "gist_id": st.secrets.get("INVITATIONS_GIST_ID", None)
+            }
+    except:
+        pass
+    
+    return {
+        "use_cloud": os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true",
+        "supabase_url": os.getenv("SUPABASE_URL"),
+        "supabase_key": os.getenv("SUPABASE_KEY"),
+        "github_token": os.getenv("GITHUB_TOKEN"),
+        "gist_id": os.getenv("INVITATIONS_GIST_ID")
+    }
+
 THEMES = {
     "Floral": {"bg": "#fff0e6", "accent": "#b22222"},
     "Temple": {"bg": "#f6eedf", "accent": "#d4af37"},
@@ -550,13 +573,142 @@ def create_test_invitation():
         logger.error(f"Error creating test invitation: {str(e)}")
         return None, f"Error creating test invitation: {str(e)}"
 
+def save_invitation_cloud(invite_id, data):
+    """Save invitation to cloud storage (GitHub Gist as fallback)"""
+    config = get_storage_config()
+    try:
+        # Try Supabase first if configured
+        if config["supabase_url"] and config["supabase_key"]:
+            try:
+                from supabase import create_client, Client
+                supabase: Client = create_client(config["supabase_url"], config["supabase_key"])
+                
+                # Create table if it doesn't exist (this would need to be done manually in Supabase)
+                result = supabase.table("invitations").upsert({
+                    "id": invite_id,
+                    "data": json.dumps(data),
+                    "created_at": datetime.utcnow().isoformat()
+                }).execute()
+                return True
+            except Exception as e:
+                logger.warning(f"Supabase save failed: {e}, trying GitHub Gist")
+        
+        # Fallback to GitHub Gist if token is available
+        if config["github_token"]:
+            import requests
+            gist_id = config["gist_id"]
+            
+            if gist_id:
+                # Update existing gist
+                url = f"https://api.github.com/gists/{gist_id}"
+                headers = {"Authorization": f"token {config['github_token']}"}
+                
+                # Load existing data
+                response = requests.get(url, headers=headers)
+                if response.status_code == 200:
+                    existing_files = response.json()["files"]
+                    invitations_data = {}
+                    if "invitations.json" in existing_files:
+                        invitations_data = json.loads(existing_files["invitations.json"]["content"])
+                    
+                    # Update with new invitation
+                    invitations_data[invite_id] = data
+                    
+                    # Update gist
+                    payload = {
+                        "files": {
+                            "invitations.json": {
+                                "content": json.dumps(invitations_data, indent=2)
+                            }
+                        }
+                    }
+                    response = requests.patch(url, headers=headers, json=payload)
+                    return response.status_code == 200
+            else:
+                # Create new gist
+                url = "https://api.github.com/gists"
+                headers = {"Authorization": f"token {config['github_token']}"}
+                payload = {
+                    "description": "Happenin Invitations Storage",
+                    "public": False,
+                    "files": {
+                        "invitations.json": {
+                            "content": json.dumps({invite_id: data}, indent=2)
+                        }
+                    }
+                }
+                response = requests.post(url, headers=headers, json=payload)
+                if response.status_code == 201:
+                    new_gist_id = response.json()["id"]
+                    logger.info(f"Created new Gist: {new_gist_id}. Set INVITATIONS_GIST_ID={new_gist_id} in secrets")
+                    return True
+    except Exception as e:
+        logger.error(f"Cloud storage save failed: {e}")
+    return False
+
+def load_invitation_cloud(invite_id):
+    """Load invitation from cloud storage"""
+    config = get_storage_config()
+    try:
+        # Try Supabase first
+        if config["supabase_url"] and config["supabase_key"]:
+            try:
+                from supabase import create_client, Client
+                supabase: Client = create_client(config["supabase_url"], config["supabase_key"])
+                result = supabase.table("invitations").select("*").eq("id", invite_id).execute()
+                if result.data:
+                    return json.loads(result.data[0]["data"])
+            except Exception as e:
+                logger.warning(f"Supabase load failed: {e}, trying GitHub Gist")
+        
+        # Fallback to GitHub Gist
+        if config["github_token"]:
+            import requests
+            gist_id = config["gist_id"]
+            if gist_id:
+                url = f"https://api.github.com/gists/{gist_id}"
+                headers = {"Authorization": f"token {config['github_token']}"}
+                response = requests.get(url, headers=headers)
+                if response.status_code == 200:
+                    files = response.json()["files"]
+                    if "invitations.json" in files:
+                        invitations_data = json.loads(files["invitations.json"]["content"])
+                        return invitations_data.get(invite_id)
+    except Exception as e:
+        logger.error(f"Cloud storage load failed: {e}")
+    return None
+
 def save_invitation(data):
     invite_id = str(uuid.uuid4())
-    with open(f"{DB_PATH}/{invite_id}.json", "w", encoding="utf-8") as f:
-        json.dump(data, f)
-    return invite_id
+    config = get_storage_config()
+    
+    # Try cloud storage first if enabled
+    if config["use_cloud"]:
+        if save_invitation_cloud(invite_id, data):
+            logger.info(f"Saved invitation {invite_id} to cloud storage")
+            return invite_id
+        else:
+            logger.warning(f"Cloud storage failed, falling back to local storage")
+    
+    # Fallback to local storage
+    try:
+        with open(f"{DB_PATH}/{invite_id}.json", "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        return invite_id
+    except Exception as e:
+        logger.error(f"Failed to save invitation locally: {e}")
+        return None
 
 def load_invitation(invite_id):
+    config = get_storage_config()
+    # Try cloud storage first if enabled
+    if config["use_cloud"]:
+        data = load_invitation_cloud(invite_id)
+        if data:
+            return data
+        logger.warning(f"Cloud storage load failed for {invite_id}, trying local storage")
+    
+    # Fallback to local storage
     try:
         with open(f"{DB_PATH}/{invite_id}.json", "r", encoding="utf-8") as f:
             return json.load(f)
@@ -604,18 +756,103 @@ def get_base_url():
     # Default: Running locally - use localhost
     return "http://localhost:8501"
 
+def save_rsvp_cloud(invite_id, rsvps):
+    """Save RSVPs to cloud storage"""
+    config = get_storage_config()
+    try:
+        if config["github_token"]:
+            import requests
+            gist_id = config["gist_id"]
+            if gist_id:
+                url = f"https://api.github.com/gists/{gist_id}"
+                headers = {"Authorization": f"token {config['github_token']}"}
+                
+                # Load existing data
+                response = requests.get(url, headers=headers)
+                if response.status_code == 200:
+                    existing_files = response.json()["files"]
+                    all_data = {}
+                    if "invitations.json" in existing_files:
+                        all_data = json.loads(existing_files["invitations.json"]["content"])
+                    
+                    # Update RSVPs for this invite
+                    if "rsvps" not in all_data:
+                        all_data["rsvps"] = {}
+                    all_data["rsvps"][invite_id] = rsvps
+                    
+                    # Update gist
+                    payload = {
+                        "files": {
+                            "invitations.json": {
+                                "content": json.dumps(all_data, indent=2)
+                            }
+                        }
+                    }
+                    response = requests.patch(url, headers=headers, json=payload)
+                    return response.status_code == 200
+    except Exception as e:
+        logger.error(f"Cloud RSVP save failed: {e}")
+    return False
+
+def load_rsvps_cloud(invite_id):
+    """Load RSVPs from cloud storage"""
+    config = get_storage_config()
+    try:
+        if config["github_token"]:
+            import requests
+            gist_id = config["gist_id"]
+            if gist_id:
+                url = f"https://api.github.com/gists/{gist_id}"
+                headers = {"Authorization": f"token {config['github_token']}"}
+                response = requests.get(url, headers=headers)
+                if response.status_code == 200:
+                    files = response.json()["files"]
+                    if "invitations.json" in files:
+                        all_data = json.loads(files["invitations.json"]["content"])
+                        if "rsvps" in all_data and invite_id in all_data["rsvps"]:
+                            return all_data["rsvps"][invite_id]
+    except Exception as e:
+        logger.error(f"Cloud RSVP load failed: {e}")
+    return None
+
 def save_rsvp(invite_id, rsvp_entry):
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
+    config = get_storage_config()
+    
+    # Load existing RSVPs
     try:
         with open(rsvp_file, "r", encoding="utf-8") as f:
             rsvps = json.load(f)
     except Exception:
         rsvps = []
+    
     rsvps.append(rsvp_entry)
-    with open(rsvp_file, "w", encoding="utf-8") as f:
-        json.dump(rsvps, f, indent=2)
+    
+    # Try cloud storage first if enabled
+    if config["use_cloud"]:
+        if save_rsvp_cloud(invite_id, rsvps):
+            logger.info(f"Saved RSVPs for {invite_id} to cloud storage")
+        else:
+            logger.warning(f"Cloud storage failed, falling back to local storage")
+    
+    # Fallback to local storage
+    try:
+        with open(rsvp_file, "w", encoding="utf-8") as f:
+            json.dump(rsvps, f, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to save RSVPs locally: {e}")
 
 def load_rsvps(invite_id):
+    config = get_storage_config()
+    
+    # Try cloud storage first if enabled
+    if config["use_cloud"]:
+        rsvps = load_rsvps_cloud(invite_id)
+        if rsvps is not None:
+            return rsvps
+        logger.warning(f"Cloud storage load failed for RSVPs {invite_id}, trying local storage")
+    
+    # Fallback to local storage
     rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
     try:
         with open(rsvp_file, "r", encoding="utf-8") as f:
@@ -660,24 +897,52 @@ def clear_rsvps(invite_id):
 
 def update_rsvp(invite_id, rsvp_index, updated_rsvp):
     """Update an existing RSVP entry"""
+    config = get_storage_config()
     rsvps = load_rsvps(invite_id)
     if 0 <= rsvp_index < len(rsvps):
         rsvps[rsvp_index] = updated_rsvp
+        
+        # Try cloud storage first if enabled
+        if config["use_cloud"]:
+            if save_rsvp_cloud(invite_id, rsvps):
+                logger.info(f"Updated RSVP for {invite_id} in cloud storage")
+            else:
+                logger.warning(f"Cloud storage failed, falling back to local storage")
+        
+        # Fallback to local storage
         rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
-        with open(rsvp_file, "w", encoding="utf-8") as f:
-            json.dump(rsvps, f, indent=2)
-        return True
+        try:
+            with open(rsvp_file, "w", encoding="utf-8") as f:
+                json.dump(rsvps, f, indent=2)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update RSVP locally: {e}")
+            return False
     return False
 
 def delete_rsvp(invite_id, rsvp_index):
     """Delete an RSVP entry"""
+    config = get_storage_config()
     rsvps = load_rsvps(invite_id)
     if 0 <= rsvp_index < len(rsvps):
         rsvps.pop(rsvp_index)
+        
+        # Try cloud storage first if enabled
+        if config["use_cloud"]:
+            if save_rsvp_cloud(invite_id, rsvps):
+                logger.info(f"Deleted RSVP for {invite_id} from cloud storage")
+            else:
+                logger.warning(f"Cloud storage failed, falling back to local storage")
+        
+        # Fallback to local storage
         rsvp_file = f"{DB_PATH}/rsvp_{invite_id}.json"
-        with open(rsvp_file, "w", encoding="utf-8") as f:
-            json.dump(rsvps, f, indent=2)
-        return True
+        try:
+            with open(rsvp_file, "w", encoding="utf-8") as f:
+                json.dump(rsvps, f, indent=2)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete RSVP locally: {e}")
+            return False
     return False
 
 def get_rsvp_analytics(invite_id):
@@ -1175,6 +1440,92 @@ def show_event_creation_page():
                 st.error(f"❌ Error saving invitation: {str(e)}")
                 logger.error(f"Error saving invitation: {str(e)}")
 
+def test_cloud_storage():
+    """Test cloud storage connectivity and functionality"""
+    config = get_storage_config()
+    results = {
+        "cloud_enabled": config["use_cloud"],
+        "github_configured": bool(config["github_token"]),
+        "supabase_configured": bool(config["supabase_url"] and config["supabase_key"]),
+        "gist_id_set": bool(config["gist_id"]),
+        "test_save": False,
+        "test_load": False,
+        "error": None
+    }
+    
+    if not config["use_cloud"]:
+        results["error"] = "Cloud storage is not enabled. Set USE_CLOUD_STORAGE=true in secrets."
+        return results
+    
+    # Test GitHub Gist if configured
+    if config["github_token"]:
+        try:
+            import requests
+            
+            # Test 1: Check if we can access/create Gist
+            test_id = "test_" + str(uuid.uuid4())
+            test_data = {"test": "data", "timestamp": str(datetime.utcnow())}
+            
+            if config["gist_id"]:
+                # Test updating existing Gist
+                url = f"https://api.github.com/gists/{config['gist_id']}"
+                headers = {"Authorization": f"token {config['github_token']}"}
+                response = requests.get(url, headers=headers)
+                if response.status_code == 200:
+                    results["test_load"] = True
+                    # Test save
+                    existing_files = response.json()["files"]
+                    all_data = {}
+                    if "invitations.json" in existing_files:
+                        all_data = json.loads(existing_files["invitations.json"]["content"])
+                    all_data[test_id] = test_data
+                    payload = {
+                        "files": {
+                            "invitations.json": {
+                                "content": json.dumps(all_data, indent=2)
+                            }
+                        }
+                    }
+                    response = requests.patch(url, headers=headers, json=payload)
+                    if response.status_code == 200:
+                        results["test_save"] = True
+                        # Clean up test data
+                        del all_data[test_id]
+                        payload["files"]["invitations.json"]["content"] = json.dumps(all_data, indent=2)
+                        requests.patch(url, headers=headers, json=payload)
+                else:
+                    results["error"] = f"Failed to access Gist: {response.status_code} - {response.text[:100]}"
+            else:
+                # Test creating new Gist
+                url = "https://api.github.com/gists"
+                headers = {"Authorization": f"token {config['github_token']}"}
+                payload = {
+                    "description": "Happenin Test Storage",
+                    "public": False,
+                    "files": {
+                        "test.json": {
+                            "content": json.dumps({test_id: test_data}, indent=2)
+                        }
+                    }
+                }
+                response = requests.post(url, headers=headers, json=payload)
+                if response.status_code == 201:
+                    results["test_save"] = True
+                    gist_id = response.json()["id"]
+                    # Test load
+                    url = f"https://api.github.com/gists/{gist_id}"
+                    response = requests.get(url, headers=headers)
+                    if response.status_code == 200:
+                        results["test_load"] = True
+                    # Clean up test Gist
+                    requests.delete(url, headers=headers)
+                else:
+                    results["error"] = f"Failed to create Gist: {response.status_code} - {response.text[:100]}"
+        except Exception as e:
+            results["error"] = str(e)
+    
+    return results
+
 def show_event_admin_page():
     """PAGE 2: Event Admin Dashboard - Per-event management page"""
     invite_id = st.query_params.get("invite", None)
@@ -1188,6 +1539,73 @@ def show_event_admin_page():
         return
     
     st.markdown("## 🛠️ Event Admin Dashboard")
+    
+    # Storage Status Section
+    st.markdown("---")
+    st.markdown("### 💾 Storage Status")
+    config = get_storage_config()
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if config["use_cloud"]:
+            st.success("✅ Cloud Storage: **Enabled**")
+        else:
+            st.warning("⚠️ Cloud Storage: **Disabled**")
+            st.caption("⚠️ Data will be lost on app restart!")
+    
+    with col2:
+        if config["github_token"]:
+            st.success("✅ GitHub Token: **Configured**")
+        else:
+            st.error("❌ GitHub Token: **Not Set**")
+    
+    with col3:
+        if config["gist_id"]:
+            st.success("✅ Gist ID: **Set**")
+            st.caption(f"ID: {config['gist_id'][:20]}...")
+        else:
+            st.info("ℹ️ Gist ID: **Will be created**")
+            st.caption("First invitation will create it")
+    
+    # Test Storage Button
+    if st.button("🧪 Test Cloud Storage", help="Test if cloud storage is working correctly"):
+        with st.spinner("Testing cloud storage..."):
+            test_results = test_cloud_storage()
+            
+            if test_results["error"]:
+                st.error(f"❌ Test Failed: {test_results['error']}")
+            else:
+                if test_results["test_save"] and test_results["test_load"]:
+                    st.success("✅ Cloud Storage Test: **PASSED**")
+                    st.info("✅ Save test: Passed\n✅ Load test: Passed")
+                elif test_results["test_save"]:
+                    st.warning("⚠️ Cloud Storage Test: **PARTIAL**")
+                    st.info("✅ Save test: Passed\n❌ Load test: Failed")
+                else:
+                    st.error("❌ Cloud Storage Test: **FAILED**")
+                    st.info("❌ Save test: Failed\n❌ Load test: Failed")
+            
+            # Show detailed results
+            with st.expander("📊 Detailed Test Results"):
+                st.json(test_results)
+    
+    # Storage Info
+    with st.expander("ℹ️ Storage Information"):
+        st.markdown("""
+        **Current Storage Mode:**
+        - Cloud storage is used when `USE_CLOUD_STORAGE=true`
+        - Data is saved to GitHub Gists (free, persistent)
+        - Falls back to local storage if cloud fails
+        
+        **To Enable Cloud Storage:**
+        1. Go to Streamlit Cloud → Settings → Secrets
+        2. Add: `USE_CLOUD_STORAGE = "true"`
+        3. Add: `GITHUB_TOKEN = "your_token"`
+        4. Restart the app
+        
+        See `CLOUD_STORAGE_SETUP.md` for detailed instructions.
+        """)
     
     # Debug section for URL troubleshooting
     with st.expander("🔧 Debug Info (for troubleshooting)", expanded=False):
